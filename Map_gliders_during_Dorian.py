@@ -39,7 +39,7 @@ kmz_file = '/Users/aristizabal/Desktop/MARACOOS_project/Maria_scripts/KMZ_files/
 ts_fig = '/Users/aristizabal/Desktop/MARACOOS_project/Maria_scripts/KMZ_files/ts_nhemi.png'
 
 # Folder where to save figure
-folder = '/Users/aristizabal/Desktop/my_papers/Evaluation_surf_metrics_Dorian/figures/'
+folder_fig = '/Users/aristizabal/Desktop/my_papers/Evaluation_surf_metrics_Dorian/figures/'
 
 #%%
 
@@ -223,7 +223,7 @@ fig, (ax1, ax2) = plt.subplots(1, 2,figsize=(10, 5))
 fig.suptitle('Active Glider Deployments '+ min_time[0:4]+'/'+min_time[5:7]+'/'+min_time[8:10]+\
              '-'+ max_time[0:4]+'/'+max_time[5:7]+'/'+max_time[8:10],fontsize=16)
 
-#ax1.contourf(bath_lonsub,bath_latsub,bath_elevsub,lev,cmap=cmocean.cm.topo)
+ax1.contourf(bath_lonsub,bath_latsub,bath_elevsub,lev,cmap=cmocean.cm.topo)
 ax1.set_xticks([])
 ax1.set_yticks([])
 ax1.plot(lon_best_track[5:-2],lat_best_track[5:-2],'o',color='firebrick',markersize=3,\
@@ -375,7 +375,7 @@ e = ERDDAP(
 #lev = np.arange(-9000,9100,100)
 #fig, ax2 = plt.subplots(figsize=(10, 5))
 #plt.contour(bath_lonsub,bath_latsub,bath_elevsub,[0],colors='k')
-#ax2.contourf(bath_lonsub,bath_latsub,bath_elevsub,lev,cmap=cmocean.cm.topo)
+ax2.contourf(bath_lonsub,bath_latsub,bath_elevsub,lev,cmap=cmocean.cm.topo)
 ax2.set_yticks([])
 ax2.set_xticks([])
 
@@ -458,8 +458,8 @@ for i in np.arange(17,24):
 ax2.axis('scaled')
 ax2.axis([lon_lim[0],lon_lim[1],lat_lim[0],lat_lim[1]])
 
-ax2.text(-69.5,22.5,'(b)',fontsize=16,color='white',weight='bold')
+ax2.text(-70.4,23.4,'(b)',fontsize=16,color='white',weight='bold')
 plt.subplots_adjust(left=0.05,right=0.95, wspace=-0.1, top=0.9)
-#file = folder + 'Daily_map_North_Atlantic_gliders_in_DAC_detail_' + min_time[0:10] + '_' + max_time[0:10] + '.png'
-file = 'Daily_map_North_Atlantic_gliders_in_DAC_detail_' + str(tmin)[0:10] + '_' + str(tmax)[0:10] 
+file = folder_fig + 'Daily_map_North_Atlantic_gliders_in_DAC_detail' + '.png' #+ min_time[0:10] + '_' + max_time[0:10] + '.png'
+#file = 'Daily_map_North_Atlantic_gliders_in_DAC_detail_' + str(tmin)[0:10] + '_' + str(tmax)[0:10] 
 plt.savefig(file,bbox_inches = 'tight',pad_inches = 0.1)  

@@ -11,23 +11,9 @@ Created on Wed May  6 09:37:22 2020
 lon_lim = [-98.5,-60.0]
 lat_lim = [10.0,45.0]
 
-# Server erddap url IOOS glider dap
-server = 'https://data.ioos.us/gliders/erddap'
-
-#gliders sg666, sg665, sg668, silbo
-gdata_sg665 = 'http://gliders.ioos.us/thredds/dodsC/deployments/aoml/SG665-20190718T1155/SG665-20190718T1155.nc3.nc'
-gdata_sg666 = 'http://gliders.ioos.us/thredds/dodsC/deployments/aoml/SG666-20190718T1206/SG666-20190718T1206.nc3.nc'
-gdata_sg668 = 'http://gliders.ioos.us/thredds/dodsC/deployments/aoml/SG668-20190819T1217/SG668-20190819T1217.nc3.nc'
-
 # Time bounds
 min_time = '2019/08/20/00'
 max_time = '2019/09/07/00'
-
-# Bathymetry file
-bath_file = '/Users/aristizabal/Desktop/MARACOOS_project/Maria_scripts/nc_files/GEBCO_2014_2D_-100.0_0.0_-10.0_50.0.nc'
-
-# KMZ file
-kmz_file = '/Users/aristizabal/Desktop/MARACOOS_project/Maria_scripts/KMZ_files/al052019_best_track-5.kmz'
 
 cycle = '2019082800'
 
@@ -48,10 +34,7 @@ Nend = 22 # indicates how far in the hurricabe track you want
 bath_file = '/home/aristizabal/bathymetry_files/GEBCO_2014_2D_-100.0_0.0_-10.0_50.0.nc'
 
 # KMZ file best track Dorian
-kmz_file_Dorian = '/home/aristizabal/KMZ_files/al052019_best_track-5.kmz'
-
-# url for GOFS 3.1
-url_GOFS = 'http://tds.hycom.org/thredds/dodsC/GLBv0.08/expt_93.0/ts3z'
+kmz_file_Dorian = '/home/aristizabal/KMZ_files/2019/al052019_best_track.kmz'
 
 # figures
 folder_fig = '/home/aristizabal/Figures/'
@@ -101,8 +84,8 @@ folder_hwrf_hycom20_exp = folder_hycom20 + 'HWRF2020_HYCOM_dorian05l.' + cycle +
 import numpy as np
 import matplotlib.pyplot as plt
 import xarray as xr
-import matplotlib.dates as mdates
 from datetime import datetime, timedelta
+import matplotlib.dates as mdates
 import os
 import os.path
 import glob
@@ -110,164 +93,12 @@ import glob
 from bs4 import BeautifulSoup
 from zipfile import ZipFile
 from matplotlib.ticker import (MultipleLocator, FormatStrFormatter)
+import seawater
 
 # Increase fontsize of labels globally
 plt.rc('xtick',labelsize=14)
 plt.rc('ytick',labelsize=14)
 plt.rc('legend',fontsize=14)
-
-#%% Function Grid glider variables according to depth
-
-def varsg_gridded(depth,time,temp,salt,dens,delta_z):
-             
-    depthg_gridded = np.arange(0,np.nanmax(depth),delta_z)
-    tempg_gridded = np.empty((len(depthg_gridded),len(time)))
-    tempg_gridded[:] = np.nan
-    saltg_gridded = np.empty((len(depthg_gridded),len(time)))
-    saltg_gridded[:] = np.nan
-    densg_gridded = np.empty((len(depthg_gridded),len(time)))
-    densg_gridded[:] = np.nan
-
-    for t,tt in enumerate(time):
-        depthu,oku = np.unique(depth[:,t],return_index=True)
-        tempu = temp[oku,t]
-        saltu = salt[oku,t]
-        densu = dens[oku,t]
-        okdd = np.isfinite(depthu)
-        depthf = depthu[okdd]
-        tempf = tempu[okdd]
-        saltf = saltu[okdd]
-        densf = densu[okdd]
- 
-        okt = np.isfinite(tempf)
-        if np.sum(okt) < 3:
-            temp[:,t] = np.nan
-        else:
-            okd = np.logical_and(depthg_gridded >= np.min(depthf[okt]),\
-                                 depthg_gridded < np.max(depthf[okt]))
-            tempg_gridded[okd,t] = np.interp(depthg_gridded[okd],depthf[okt],tempf[okt])
-            
-        oks = np.isfinite(saltf)
-        if np.sum(oks) < 3:
-            saltg_gridded[:,t] = np.nan
-        else:
-            okd = np.logical_and(depthg_gridded >= np.min(depthf[okt]),\
-                        depthg_gridded < np.max(depthf[okt]))
-            saltg_gridded[okd,t] = np.interp(depthg_gridded[okd],depthf[oks],saltf[oks])
-    
-        okdd = np.isfinite(densf)
-        if np.sum(okdd) < 3:
-            densg_gridded[:,t] = np.nan
-        else:
-            okd = np.logical_and(depthg_gridded >= np.min(depthf[okdd]),\
-                        depthg_gridded < np.max(depthf[okdd]))
-            densg_gridded[okd,t] = np.interp(depthg_gridded[okd],depthf[okdd],densf[okdd])
-        
-    return depthg_gridded, tempg_gridded, saltg_gridded, densg_gridded
-           
-#%% Get latent and sensible heat fluxes at glider position and time 
-def get_sensible_latent_heat_fluxes_HWRF(ncfile_list,latg,long,timeg):
-
-    shtfl_hwrf = []
-    lhtfl_hwrf = []
-    time_hwrf = []
-    
-    for N,file in enumerate(ncfile_list):
-        print(N)
-        HWRF = xr.open_dataset(file)
-        lat_hwrf = np.asarray(HWRF.variables['latitude'][:])
-        lon_hwrf = np.asarray(HWRF.variables['longitude'][:])
-        t_hwrf = np.asarray(HWRF.variables['time'][:])
-        SHTFL_hwrf = np.asarray(HWRF.variables['SHTFL_surface'][0,:,:])
-        LHTFL_hwrf = np.asarray(HWRF.variables['LHTFL_surface'][0,:,:])
-        
-        # Changing times to timestamp
-        tstamp_glider = [mdates.date2num(timeg[i]) for i in np.arange(len(timeg))]
-        tstamp_hwrf = [mdates.date2num(t_hwrf[i]) for i in np.arange(len(t_hwrf))]
-        
-        # interpolating glider lon and lat to lat and lon on model time
-        sublon_hwrf = np.interp(tstamp_hwrf,tstamp_glider,long)
-        sublat_hwrf = np.interp(tstamp_hwrf,tstamp_glider,latg)
-        
-        # getting the model grid positions for sublonm and sublatm
-        oklon_hwrf = np.round(np.interp(sublon_hwrf,lon_hwrf,np.arange(len(lon_hwrf)))).astype(int)
-        oklat_hwrf = np.round(np.interp(sublat_hwrf,lat_hwrf,np.arange(len(lat_hwrf)))).astype(int)
-            
-        shtfl_hwrf.append(SHTFL_hwrf[oklat_hwrf,oklon_hwrf][0])
-        lhtfl_hwrf.append(LHTFL_hwrf[oklat_hwrf,oklon_hwrf][0])
-        time_hwrf.append(t_hwrf[0])
-        
-    shtfl_hwrf = np.asarray(shtfl_hwrf)
-    lhtfl_hwrf = np.asarray(lhtfl_hwrf)
-    time_hwrf = np.asarray(time_hwrf)
-    
-    return shtfl_hwrf, lhtfl_hwrf, time_hwrf
-
-#%%
-def MLD_temp_and_dens_criteria(dt,drho,time,depth,temp,salt,dens):
-
-    MLD_temp_crit = np.empty(temp.shape[1]) 
-    MLD_temp_crit[:] = np.nan
-    Tmean_temp_crit = np.empty(temp.shape[1]) 
-    Tmean_temp_crit[:] = np.nan
-    Smean_temp_crit = np.empty(temp.shape[1]) 
-    Smean_temp_crit[:] = np.nan
-    Td_temp_crit = np.empty(temp.shape[1]) 
-    Td_temp_crit[:] = np.nan
-    MLD_dens_crit = np.empty(temp.shape[1])
-    MLD_dens_crit[:] = np.nan
-    Tmean_dens_crit = np.empty(temp.shape[1])
-    Tmean_dens_crit[:] = np.nan
-    Smean_dens_crit = np.empty(temp.shape[1]) 
-    Smean_dens_crit[:] = np.nan
-    Td_dens_crit = np.empty(temp.shape[1]) 
-    Td_dens_crit[:] = np.nan
-    for t in np.arange(temp.shape[1]):
-        if depth.ndim == 1:
-            d10 = np.where(depth >= 10)[0][0]
-        if depth.ndim == 2:
-            d10 = np.where(depth[:,t] >= -10)[0][-1]
-        T10 = temp[d10,t]
-        delta_T = T10 - temp[:,t] 
-        ok_mld_temp = np.where(delta_T <= dt)[0]
-        rho10 = dens[d10,t]
-        delta_rho = -(rho10 - dens[:,t])
-        ok_mld_rho = np.where(delta_rho <= drho)[0]
-        
-        if ok_mld_temp.size == 0:
-            MLD_temp_crit[t] = np.nan
-            Td_temp_crit[t] = np.nan
-            Tmean_temp_crit[t] = np.nan
-            Smean_temp_crit[t] = np.nan            
-        else:                             
-            if depth.ndim == 1:
-                MLD_temp_crit[t] = depth[ok_mld_temp[-1]]
-                ok_mld_plus1m = np.where(depth >= depth[ok_mld_temp[-1]] + 1)[0][0]                 
-            if depth.ndim == 2:
-                MLD_temp_crit[t] = depth[ok_mld_temp[-1],t]
-                ok_mld_plus1m = np.where(depth >= depth[ok_mld_temp[-1],t] + 1)[0][0]
-            Td_temp_crit[t] = temp[ok_mld_plus1m,t]
-            Tmean_temp_crit[t] = np.nanmean(temp[ok_mld_temp,t])
-            Smean_temp_crit[t] = np.nanmean(salt[ok_mld_temp,t])
-                
-        if ok_mld_rho.size == 0:
-            MLD_dens_crit[t] = np.nan
-            Td_dens_crit[t] = np.nan
-            Tmean_dens_crit[t] = np.nan
-            Smean_dens_crit[t] = np.nan           
-        else:
-            if depth.ndim == 1:
-                MLD_dens_crit[t] = depth[ok_mld_rho[-1]]
-                ok_mld_plus1m = np.where(depth >= depth[ok_mld_rho[-1]] + 1)[0][0] 
-            if depth.ndim == 2:
-                MLD_dens_crit[t] = depth[ok_mld_rho[-1],t]
-                ok_mld_plus1m = np.where(depth >= depth[ok_mld_rho[-1],t] + 1)[0][0] 
-            Td_dens_crit[t] = temp[ok_mld_plus1m,t]        
-            Tmean_dens_crit[t] = np.nanmean(temp[ok_mld_rho,t])
-            Smean_dens_crit[t] = np.nanmean(salt[ok_mld_rho,t]) 
-
-    return MLD_temp_crit,Tmean_temp_crit,Smean_temp_crit,Td_temp_crit,\
-           MLD_dens_crit,Tmean_dens_crit,Smean_dens_crit,Td_dens_crit
 
 #%% Read best storm track from kmz file
     
@@ -339,6 +170,39 @@ def get_max_winds_10m_HWRF(folder_nc_files):
         
     return max_wind_10m_hwrf, time_hwrf
 
+#%% Get storm track from HWRF/POM output
+
+def get_storm_track_POM(file_track):
+
+    ff = open(file_track,'r')
+    f = ff.readlines()
+    
+    latt = []
+    lont = []
+    lead_time = []
+    for l in f:
+        lat = float(l.split(',')[6][0:4])/10
+        if l.split(',')[6][4] == 'N':
+            lat = lat
+        else:
+            lat = -lat
+        lon = float(l.split(',')[7][0:5])/10
+        if l.split(',')[7][4] == 'E':
+            lon = lon
+        else:
+            lon = -lon
+        latt.append(lat)
+        lont.append(lon)
+        lead_time.append(int(l.split(',')[5][1:4]))
+    
+    latt = np.asarray(latt)
+    lont = np.asarray(lont)
+    lead_time, ind = np.unique(lead_time,return_index=True)
+    lat_track = latt[ind]
+    lon_track = lont[ind]  
+
+    return lon_track, lat_track, lead_time
+
 #%% Reading bathymetry data
 ncbath = xr.open_dataset(bath_file)
 bath_lat = ncbath.variables['lat'][:]
@@ -381,13 +245,493 @@ max_wind_10m_hwrf_pom19_oper = 1.94384 * np.asarray(max_wind_10m_hwrf_pom19_oper
 max_wind_10m_hwrf_pom20_exp = 1.94384 * np.asarray(max_wind_10m_hwrf_pom20_exp)
 max_wind_10m_hwrf_hycom20_exp = 1.94384 * np.asarray(max_wind_10m_hwrf_hycom20_exp)
 
-#%% Reading glider data
-#Time window
+#%% Get Dorian track from models
+
+lon_forec_track_pom_oper, lat_forec_track_pom_oper, lead_time_pom_oper = get_storm_track_POM(hwrf_pom_track_oper)
+
+lon_forec_track_pom_exp, lat_forec_track_pom_exp, lead_time_pom_exp = get_storm_track_POM(hwrf_pom_track_exp)
+
+lon_forec_track_hycom_exp, lat_forec_track_hycom_exp, lead_time_hycom_exp = get_storm_track_POM(hwrf_hycom_track_exp)
+   
+#%% Time window
 date_ini = cycle[0:4]+'/'+cycle[4:6]+'/'+cycle[6:8]+'/'+cycle[8:]+'/00/00'
 tini = datetime.strptime(date_ini,'%Y/%m/%d/%H/%M/%S')
 tend = tini + timedelta(hours=126)
 date_end = tend.strftime('%Y/%m/%d/%H/%M/%S')
 
+#%% Acumulated heat fluxes
+
+#RR_norm_bins = np.arange(0,8,0.1)
+RR_norm_bins = np.arange(0,8.1,0.5)
+RR_norm_bins_mid = RR_norm_bins[0:-1] + np.diff(RR_norm_bins)/2 
+
+sshla_vec_max_pom_oper = np.empty((3,len(RR_norm_bins)))
+sshla_vec_max_pom_oper[:] = np.nan
+sshla_vec_mean_pom_oper = np.empty((3,len(RR_norm_bins)))
+sshla_vec_mean_pom_oper[:] = np.nan
+sshla_vec_min_pom_oper = np.empty((3,len(RR_norm_bins)))
+sshla_vec_min_pom_oper[:] = np.nan
+area_int_flux_pom_oper = np.empty((3))
+area_int_flux_pom_oper[:] = np.nan
+
+time = []
+
+for N,indx in enumerate(np.asarray([6,22,28])):    
+    print(HWRF_POM_oper[indx])
+    HWRF = xr.open_dataset(HWRF_POM_oper[indx])
+    lat_hwrf = np.asarray(HWRF.variables['latitude'][:])
+    lon_hwrf = np.asarray(HWRF.variables['longitude'][:])
+    time_hwrf = np.asarray(HWRF.variables['time'][:])
+    UGRD_hwrf = np.asarray(HWRF.variables['UGRD_10maboveground'][0,:,:])
+    VGRD_hwrf = np.asarray(HWRF.variables['VGRD_10maboveground'][0,:,:])
+    SHTFL_hwrf = np.asarray(HWRF.variables['SHTFL_surface'][0,:,:])
+    LHTFL_hwrf = np.asarray(HWRF.variables['LHTFL_surface'][0,:,:])
+    enth_hwrf = SHTFL_hwrf + LHTFL_hwrf
+    
+    time.append(np.asarray(HWRF.variables['time'][:]))
+    
+    wind_int = np.sqrt(UGRD_hwrf**2 + VGRD_hwrf**2)
+    max_wind= np.max(wind_int)
+    okwind = np.where(wind_int == max_wind)
+    lat_maxwind = lat_hwrf[okwind[0][0]]
+    lon_maxwind = lon_hwrf[okwind[1][0]]
+    Rmax = seawater.dist([lat_forec_track_pom_oper[indx],lat_maxwind],\
+                         [lon_forec_track_pom_oper[indx],lon_maxwind],'km')[0][0]
+        
+    xlim = [lon_forec_track_pom_oper[indx]-4,lon_forec_track_pom_oper[indx]+4]
+    ylim = [lat_forec_track_pom_oper[indx]-4,lat_forec_track_pom_oper[indx]+4]
+    
+    oklon = np.where(np.logical_and(lon_hwrf>xlim[0],lon_hwrf<xlim[1]))[0]
+    oklat = np.where(np.logical_and(lat_hwrf>ylim[0],lat_hwrf<ylim[1]))[0]
+    
+    meshlon_lat = np.meshgrid(lon_hwrf[oklon],lat_hwrf[oklat])
+    #meshlat = np.meshgrid(lat_hwrf[oklat],lon_hwrf[oklon])
+    
+    eye_lon = np.tile(lon_forec_track_pom_oper[indx],meshlon_lat[0].shape[1])
+    eye_lat = np.tile(lat_forec_track_pom_oper[indx],meshlon_lat[0].shape[0])
+    eye_matrix = np.meshgrid(eye_lon,eye_lat)
+    
+    lat_lon_matrix = np.stack((np.ravel(meshlon_lat[0]),np.ravel(meshlon_lat[1])),axis=1).T
+    eye_lat_lon_matrix = np.stack((np.ravel(eye_matrix[0]),np.ravel(eye_matrix[1])),axis=1).T
+    
+    delta_x = np.diff(lon_hwrf[oklon])[0] 
+    delta_y = np.diff(lat_hwrf[oklat])[0]
+    area_hwrf = delta_x * delta_y * np.cos(lat_hwrf[oklat]*np.pi/180) * (111111*10**2)**2
+    _,area_matrix = np.meshgrid(np.arange(0,len(oklon)),area_hwrf)
+        
+    R = np.empty(lat_lon_matrix.shape[1])
+    R[:] = np.nan
+    for i in np.arange(lat_lon_matrix.shape[1]):
+        R[i] = seawater.dist([lat_forec_track_pom_oper[indx],lat_lon_matrix[1,i]],\
+                             [lon_forec_track_pom_oper[indx],lat_lon_matrix[0,i]],'km')[0][0] 
+    
+    R_norm = R/Rmax
+    okR_4 = R_norm <= 4
+    okR_8 = R_norm <= 8
+    okR1 = np.logical_and(R_norm <= 1.05,R_norm >= 0.95)
+    okR2 = np.logical_and(R_norm <= 2.05,R_norm >= 1.95)
+    okR3 = np.logical_and(R_norm <= 3.05,R_norm >= 2.95)
+    okR4 = np.logical_and(R_norm <= 4.05,R_norm >= 3.95)
+    okR5 = np.logical_and(R_norm <= 5.05,R_norm >= 4.95)
+    okR6 = np.logical_and(R_norm <= 6.05,R_norm >= 5.95)
+    okR7 = np.logical_and(R_norm <= 7.05,R_norm >= 6.95)
+    okR8 = np.logical_and(R_norm <= 8.05,R_norm >= 7.95)
+    
+    RR_norm = R_norm[okR_8]
+    
+    #units kj/cm^2
+    sea_surf_heat_loss_area_hurr = enth_hwrf[oklat,:][:,oklon] * 3*3600*10**(-7)
+    
+    sshla_vec = np.ravel(sea_surf_heat_loss_area_hurr)[okR_8]
+    sshla_vec[sshla_vec<=0.05] = np.nan
+    area_matrix_vec = np.ravel(area_matrix)[okR_8]
+    
+    area_int_flux_pom_oper[N] = np.nansum(sshla_vec * area_matrix_vec)/np.nansum(area_matrix_vec)
+    
+    okRR = np.argsort(RR_norm)
+    sshla_vec_interp = np.interp(RR_norm_bins,RR_norm[okRR],sshla_vec[okRR])
+    
+    for n in np.arange(1,len(RR_norm_bins)):
+        print(n)
+        okR = np.logical_and(RR_norm >= RR_norm_bins[n-1],RR_norm <= RR_norm_bins[n])
+        '''
+        sshla_vec_max_pom_oper[N,n] = np.nanmax(sshla_vec[okR])
+        sshla_vec_mean_pom_oper[N,n] = np.nanmean(sshla_vec[okR])
+        sshla_vec_min_pom_oper[N,n] = np.nanmin(sshla_vec[okR])
+        '''
+        if len(np.where(okR)[0])==0:
+            sshla_vec_max_pom_oper[N,n] = np.nan
+            sshla_vec_mean_pom_oper[N,n] = np.nan
+            sshla_vec_min_pom_oper[N,n] = np.nan
+        else:
+            maxv = np.nanmean(sshla_vec[okR]) + 3*np.nanstd(sshla_vec[okR])
+            minv = np.nanmean(sshla_vec[okR]) - 3*np.nanstd(sshla_vec[okR])
+            okk = np.logical_and(sshla_vec[okR] >= minv,sshla_vec[okR] <= maxv)
+            sshla_vec_max_pom_oper[N,n] = np.nanmax(sshla_vec[okR][okk])
+            sshla_vec_mean_pom_oper[N,n] = np.nanmean(sshla_vec[okR][okk])
+            sshla_vec_min_pom_oper[N,n] = np.nanmin(sshla_vec[okR][okk])
+                
+    plt.figure()
+    plt.plot(RR_norm[okRR],sshla_vec[okRR],'.')
+    plt.plot(RR_norm_bins_mid,sshla_vec_max_pom_oper[N,1:],'.-')
+    plt.plot(RR_norm_bins_mid,sshla_vec_min_pom_oper[N,1:],'.-')
+    plt.plot(RR_norm_bins_mid,sshla_vec_mean_pom_oper[N,1:],'.-')
+    
+    c = sshla_vec
+    fig,ax = plt.subplots()
+    plt.scatter(lat_lon_matrix[0][okR_8],lat_lon_matrix[1][okR_8],c=c,cmap='YlOrRd',vmin=0,vmax=0.8)
+    c=plt.colorbar()
+    c.set_label('$KJ/cm^2$',rotation=90, labelpad=15, fontsize=14)
+    plt.title('Sea Surface Heat Loss per area on ' + str(time_hwrf[0])[0:13] + '\n HWRF2019-POM (IC Clim.)',fontsize=15)
+    plt.plot(eye_lon[0],eye_lat[0],'*k',markersize=10)
+    plt.plot(lon_forec_track_pom_oper,lat_forec_track_pom_oper,'.-k') 
+    plt.plot(lat_lon_matrix[0][okR1],lat_lon_matrix[1][okR1],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR2],lat_lon_matrix[1][okR2],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR3],lat_lon_matrix[1][okR3],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR4],lat_lon_matrix[1][okR4],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR5],lat_lon_matrix[1][okR5],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR6],lat_lon_matrix[1][okR6],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR7],lat_lon_matrix[1][okR7],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR8],lat_lon_matrix[1][okR8],'.k',markersize=1)
+    plt.plot(lon_maxwind,lat_maxwind,'*k',markersize=10)  
+    plt.axis('scaled') 
+    plt.xlim(np.min(lat_lon_matrix[0][okR_8])-0.1,np.max(lat_lon_matrix[0][okR_8])+0.1) 
+    plt.ylim(np.min(lat_lon_matrix[1][okR_8])-0.1,np.max(lat_lon_matrix[1][okR_8])+0.1) 
+    
+    kw = dict(levels=np.arange(0,0.81,0.1))
+    sea_surf_heat_loss_area_hurr[sea_surf_heat_loss_area_hurr>0.79] = 0.79
+    fig,ax = plt.subplots()
+    plt.contourf(lon_hwrf[oklon],lat_hwrf[oklat],sea_surf_heat_loss_area_hurr,cmap='YlOrRd',\
+                 **kw,vmin=0,vmax=0.8)
+    c=plt.colorbar()
+    #plt.contour(lon_hwrf[oklon],lat_hwrf[oklat],sea_surf_heat_loss_area_hurr,\
+    #            cmap='YlOrRd',linestyle='--',**kw)    
+    c.set_label('$KJ/cm^2$',rotation=90, labelpad=15, fontsize=14)
+    plt.title('Sea Surface Heat Loss per area on ' + str(time_hwrf[0])[0:13] + '\n HWRF2019-POM (IC Clim.)',fontsize=15)
+    plt.plot(eye_lon[0],eye_lat[0],'*k',markersize=10)
+    plt.plot(lon_forec_track_pom_oper,lat_forec_track_pom_oper,'.-k') 
+    plt.plot(lat_lon_matrix[0][okR1],lat_lon_matrix[1][okR1],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR2],lat_lon_matrix[1][okR2],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR3],lat_lon_matrix[1][okR3],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR4],lat_lon_matrix[1][okR4],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR5],lat_lon_matrix[1][okR5],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR6],lat_lon_matrix[1][okR6],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR7],lat_lon_matrix[1][okR7],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR8],lat_lon_matrix[1][okR8],'.k',markersize=1)
+    plt.plot(lon_maxwind,lat_maxwind,'*k',markersize=10)  
+    plt.axis('scaled') 
+    plt.xlim(np.min(lat_lon_matrix[0][okR_8])-0.1,np.max(lat_lon_matrix[0][okR_8])+0.1) 
+    plt.ylim(np.min(lat_lon_matrix[1][okR_8])-0.1,np.max(lat_lon_matrix[1][okR_8])+0.1)  
+
+    
+#%% Acumulated heat fluxes
+        
+RR_norm_bins = np.arange(0,8,0.1)
+RR_norm_bins_mid = RR_norm_bins[0:-1] + np.diff(RR_norm_bins)/2 
+
+sshla_vec_max_pom_exp = np.empty((3,len(RR_norm_bins)))
+sshla_vec_max_pom_exp[:] = np.nan
+sshla_vec_mean_pom_exp = np.empty((3,len(RR_norm_bins)))
+sshla_vec_mean_pom_exp[:] = np.nan
+sshla_vec_min_pom_exp = np.empty((3,len(RR_norm_bins)))
+sshla_vec_min_pom_exp[:] = np.nan 
+area_int_flux_pom_exp = np.empty((3))
+area_int_flux_pom_exp[:] = np.nan       
+
+for N,indx in enumerate(np.asarray([6,22,28])):    
+    print(HWRF_POM_exp[indx])
+    HWRF = xr.open_dataset(HWRF_POM_exp[indx])
+    lat_hwrf = np.asarray(HWRF.variables['latitude'][:])
+    lon_hwrf = np.asarray(HWRF.variables['longitude'][:])
+    time_hwrf = np.asarray(HWRF.variables['time'][:])
+    UGRD_hwrf = np.asarray(HWRF.variables['UGRD_10maboveground'][0,:,:])
+    VGRD_hwrf = np.asarray(HWRF.variables['VGRD_10maboveground'][0,:,:])
+    SHTFL_hwrf = np.asarray(HWRF.variables['SHTFL_surface'][0,:,:])
+    LHTFL_hwrf = np.asarray(HWRF.variables['LHTFL_surface'][0,:,:])
+    enth_hwrf = SHTFL_hwrf + LHTFL_hwrf
+    
+    wind_int = np.sqrt(UGRD_hwrf**2 + VGRD_hwrf**2)
+    max_wind= np.max(wind_int)
+    okwind = np.where(wind_int == max_wind)
+    lat_maxwind = lat_hwrf[okwind[0][0]]
+    lon_maxwind = lon_hwrf[okwind[1][0]]
+    Rmax = seawater.dist([lat_forec_track_pom_exp[indx],lat_maxwind],\
+                         [lon_forec_track_pom_exp[indx],lon_maxwind],'km')[0][0]
+        
+    xlim = [lon_forec_track_pom_exp[indx]-4,lon_forec_track_pom_exp[indx]+4]
+    ylim = [lat_forec_track_pom_exp[indx]-4,lat_forec_track_pom_exp[indx]+4]
+    
+    oklon = np.where(np.logical_and(lon_hwrf>xlim[0],lon_hwrf<xlim[1]))[0]
+    oklat = np.where(np.logical_and(lat_hwrf>ylim[0],lat_hwrf<ylim[1]))[0]
+    
+    meshlon_lat = np.meshgrid(lon_hwrf[oklon],lat_hwrf[oklat])
+    #meshlat = np.meshgrid(lat_hwrf[oklat],lon_hwrf[oklon])
+    
+    eye_lon = np.tile(lon_forec_track_pom_exp[indx],meshlon_lat[0].shape[1])
+    eye_lat = np.tile(lat_forec_track_pom_exp[indx],meshlon_lat[0].shape[0])
+    eye_matrix = np.meshgrid(eye_lon,eye_lat)
+    
+    delta_x = np.diff(lon_hwrf[oklon])[0] 
+    delta_y = np.diff(lat_hwrf[oklat])[0]
+    area_hwrf = delta_x * delta_y * np.cos(lat_hwrf[oklat]*np.pi/180) * (111111*10**2)**2
+    _,area_matrix = np.meshgrid(np.arange(0,len(oklon)),area_hwrf)
+    
+    lat_lon_matrix = np.stack((np.ravel(meshlon_lat[0]),np.ravel(meshlon_lat[1])),axis=1).T
+    eye_lat_lon_matrix = np.stack((np.ravel(eye_matrix[0]),np.ravel(eye_matrix[1])),axis=1).T
+    
+    R = np.empty(lat_lon_matrix.shape[1])
+    R[:] = np.nan
+    for i in np.arange(lat_lon_matrix.shape[1]):
+        R[i] = seawater.dist([lat_forec_track_pom_exp[indx],lat_lon_matrix[1,i]],\
+                             [lon_forec_track_pom_exp[indx],lat_lon_matrix[0,i]],'km')[0][0] 
+    
+    R_norm = R/Rmax
+    okR_4 = R_norm <= 4
+    okR_8 = R_norm <= 8
+    okR1 = np.logical_and(R_norm <= 1.05,R_norm >= 0.95)
+    okR2 = np.logical_and(R_norm <= 2.05,R_norm >= 1.95)
+    okR3 = np.logical_and(R_norm <= 3.05,R_norm >= 2.95)
+    okR4 = np.logical_and(R_norm <= 4.05,R_norm >= 3.95)
+    okR5 = np.logical_and(R_norm <= 5.05,R_norm >= 4.95)
+    okR6 = np.logical_and(R_norm <= 6.05,R_norm >= 5.95)
+    okR7 = np.logical_and(R_norm <= 7.05,R_norm >= 6.95)
+    okR8 = np.logical_and(R_norm <= 8.05,R_norm >= 7.95)
+    
+    RR_norm = R_norm[okR_8]
+    
+    #units kj/cm^2
+    sea_surf_heat_loss_area_hurr = enth_hwrf[oklat,:][:,oklon] * 3*3600*10**(-7)
+    
+    sshla_vec = np.ravel(sea_surf_heat_loss_area_hurr)[okR_8]
+    sshla_vec[sshla_vec<=0.05] = np.nan
+    area_matrix_vec = np.ravel(area_matrix)[okR_8]
+    
+    area_int_flux_pom_exp[N] = np.nansum(sshla_vec * area_matrix_vec)/np.nansum(area_matrix_vec)
+    
+    okRR = np.argsort(RR_norm)
+    sshla_vec_interp = np.interp(RR_norm_bins,RR_norm[okRR],sshla_vec[okRR])
+    
+    for n in np.arange(1,len(RR_norm_bins)):
+        print(n)
+        okR = np.logical_and(RR_norm >= RR_norm_bins[n-1],RR_norm <= RR_norm_bins[n])
+        if len(np.where(okR)[0])==0:
+            sshla_vec_max_pom_exp[N,n] = np.nan
+            sshla_vec_mean_pom_exp[N,n] = np.nan
+            sshla_vec_min_pom_exp[N,n] = np.nan
+        else:
+            
+            sshla_vec_max_pom_exp[N,n] = np.nanmax(sshla_vec[okR])
+            sshla_vec_mean_pom_exp[N,n] = np.nanmean(sshla_vec[okR])
+            sshla_vec_min_pom_exp[N,n] = np.nanmin(sshla_vec[okR])
+            '''
+            maxv = np.nanmean(sshla_vec[okR]) + 2*np.nanstd(sshla_vec[okR])
+            minv = np.nanmean(sshla_vec[okR]) - 2*np.nanstd(sshla_vec[okR])
+            okk = np.logical_and(sshla_vec[okR] >= minv,sshla_vec[okR] <= maxv)
+            sshla_vec_max_pom_exp[N,n] = np.nanmax(sshla_vec[okR][okk])
+            sshla_vec_mean_pom_exp[N,n] = np.nanmean(sshla_vec[okR][okk])
+            sshla_vec_min_pom_exp[N,n] = np.nanmin(sshla_vec[okR][okk])
+            '''       
+    plt.figure()
+    plt.plot(RR_norm[okRR],sshla_vec[okRR],'.')
+    plt.plot(RR_norm_bins_mid,sshla_vec_max_pom_exp[N,1:],'.-')
+    plt.plot(RR_norm_bins_mid,sshla_vec_min_pom_exp[N,1:],'.-')
+    plt.plot(RR_norm_bins_mid,sshla_vec_mean_pom_exp[N,1:],'.-')
+    plt.ylim(0,1)
+    
+    sshla_vec = np.ravel(sea_surf_heat_loss_area_hurr)[okR_8]
+    c = sshla_vec
+    fig,ax = plt.subplots()
+    plt.scatter(lat_lon_matrix[0][okR_8],lat_lon_matrix[1][okR_8],c=c,cmap='YlOrRd',vmin=0,vmax=0.8)
+    c=plt.colorbar()
+    c.set_label('$KJ/cm^2$',rotation=90, labelpad=15, fontsize=14)
+    plt.title('Sea Surface Heat Loss per area on ' + str(time_hwrf[0])[0:13] + '\n HWRF2020-POM (IC RTOFS)',fontsize=15)
+    plt.plot(eye_lon[0],eye_lat[0],'*k',markersize=10)
+    plt.plot(lon_forec_track_pom_exp,lat_forec_track_pom_exp,'.-k') 
+    plt.plot(lat_lon_matrix[0][okR1],lat_lon_matrix[1][okR1],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR2],lat_lon_matrix[1][okR2],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR3],lat_lon_matrix[1][okR3],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR4],lat_lon_matrix[1][okR4],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR5],lat_lon_matrix[1][okR5],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR6],lat_lon_matrix[1][okR6],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR7],lat_lon_matrix[1][okR7],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR8],lat_lon_matrix[1][okR8],'.k',markersize=1)
+    plt.plot(lon_maxwind,lat_maxwind,'*k',markersize=10)  
+    plt.axis('scaled') 
+    plt.xlim(np.min(lat_lon_matrix[0][okR_8])-0.1,np.max(lat_lon_matrix[0][okR_8])+0.1) 
+    plt.ylim(np.min(lat_lon_matrix[1][okR_8])-0.1,np.max(lat_lon_matrix[1][okR_8])+0.1)  
+    #ax.text(np.min(lat_lon_matrix[0][okR8]),np.min(lat_lon_matrix[1][okR8])-0.6,\
+    #        'Rmax = ' + str(np.round(Rmax,2)) + ' Km',fontsize=14)
+        
+#%% Acumulated heat fluxes
+        
+RR_norm_bins = np.arange(0,8,0.1)
+RR_norm_bins_mid = RR_norm_bins[0:-1] + np.diff(RR_norm_bins)/2 
+
+sshla_vec_max_hycom_exp = np.empty((3,len(RR_norm_bins)))
+sshla_vec_max_hycom_exp[:] = np.nan
+sshla_vec_mean_hycom_exp = np.empty((3,len(RR_norm_bins)))
+sshla_vec_mean_hycom_exp[:] = np.nan
+sshla_vec_min_hycom_exp = np.empty((3,len(RR_norm_bins)))
+sshla_vec_min_hycom_exp[:] = np.nan
+area_int_flux_hycom_exp = np.empty((3))
+area_int_flux_hycom_exp[:] = np.nan     
+
+for N,indx in enumerate(np.asarray([6,22,28])):    
+    print(HWRF_HYCOM_exp[indx])
+    HWRF = xr.open_dataset(HWRF_HYCOM_exp[indx])
+    lat_hwrf = np.asarray(HWRF.variables['latitude'][:])
+    lon_hwrf = np.asarray(HWRF.variables['longitude'][:])
+    time_hwrf = np.asarray(HWRF.variables['time'][:])
+    UGRD_hwrf = np.asarray(HWRF.variables['UGRD_10maboveground'][0,:,:])
+    VGRD_hwrf = np.asarray(HWRF.variables['VGRD_10maboveground'][0,:,:])
+    SHTFL_hwrf = np.asarray(HWRF.variables['SHTFL_surface'][0,:,:])
+    LHTFL_hwrf = np.asarray(HWRF.variables['LHTFL_surface'][0,:,:])
+    enth_hwrf = SHTFL_hwrf + LHTFL_hwrf
+    
+    wind_int = np.sqrt(UGRD_hwrf**2 + VGRD_hwrf**2)
+    max_wind= np.max(wind_int)
+    okwind = np.where(wind_int == max_wind)
+    lat_maxwind = lat_hwrf[okwind[0][0]]
+    lon_maxwind = lon_hwrf[okwind[1][0]]
+    Rmax = seawater.dist([lat_forec_track_hycom_exp[indx],lat_maxwind],\
+                         [lon_forec_track_hycom_exp[indx],lon_maxwind],'km')[0][0]
+        
+    xlim = [lon_forec_track_hycom_exp[indx]-4,lon_forec_track_hycom_exp[indx]+4]
+    ylim = [lat_forec_track_hycom_exp[indx]-4,lat_forec_track_hycom_exp[indx]+4]
+    
+    oklon = np.where(np.logical_and(lon_hwrf>xlim[0],lon_hwrf<xlim[1]))[0]
+    oklat = np.where(np.logical_and(lat_hwrf>ylim[0],lat_hwrf<ylim[1]))[0]
+    
+    meshlon_lat = np.meshgrid(lon_hwrf[oklon],lat_hwrf[oklat])
+    #meshlat = np.meshgrid(lat_hwrf[oklat],lon_hwrf[oklon])
+    
+    eye_lon = np.tile(lon_forec_track_hycom_exp[indx],meshlon_lat[0].shape[1])
+    eye_lat = np.tile(lat_forec_track_hycom_exp[indx],meshlon_lat[0].shape[0])
+    eye_matrix = np.meshgrid(eye_lon,eye_lat)
+    
+    lat_lon_matrix = np.stack((np.ravel(meshlon_lat[0]),np.ravel(meshlon_lat[1])),axis=1).T
+    eye_lat_lon_matrix = np.stack((np.ravel(eye_matrix[0]),np.ravel(eye_matrix[1])),axis=1).T
+    
+    delta_x = np.diff(lon_hwrf[oklon])[0] 
+    delta_y = np.diff(lat_hwrf[oklat])[0]
+    area_hwrf = delta_x * delta_y * np.cos(lat_hwrf[oklat]*np.pi/180) * (111111*10**2)**2
+    _,area_matrix = np.meshgrid(np.arange(0,len(oklon)),area_hwrf)
+    
+    R = np.empty(lat_lon_matrix.shape[1])
+    R[:] = np.nan
+    for i in np.arange(lat_lon_matrix.shape[1]):
+        R[i] = seawater.dist([lat_forec_track_hycom_exp[indx],lat_lon_matrix[1,i]],\
+                             [lon_forec_track_hycom_exp[indx],lat_lon_matrix[0,i]],'km')[0][0] 
+    
+    R_norm = R/Rmax
+    okR_4 = R_norm <= 4
+    okR_8 = R_norm <= 8
+    okR1 = np.logical_and(R_norm <= 1.05,R_norm >= 0.95)
+    okR2 = np.logical_and(R_norm <= 2.05,R_norm >= 1.95)
+    okR3 = np.logical_and(R_norm <= 3.05,R_norm >= 2.95)
+    okR4 = np.logical_and(R_norm <= 4.05,R_norm >= 3.95)
+    okR5 = np.logical_and(R_norm <= 5.05,R_norm >= 4.95)
+    okR6 = np.logical_and(R_norm <= 6.05,R_norm >= 5.95)
+    okR7 = np.logical_and(R_norm <= 7.05,R_norm >= 6.95)
+    okR8 = np.logical_and(R_norm <= 8.05,R_norm >= 7.95)
+    
+    RR_norm = R_norm[okR_8]
+    
+    #units kj/cm^2
+    sea_surf_heat_loss_area_hurr = enth_hwrf[oklat,:][:,oklon] * 3*3600*10**(-7)
+    
+    sshla_vec = np.ravel(sea_surf_heat_loss_area_hurr)[okR_8]
+    sshla_vec[sshla_vec<=0.05] = np.nan
+    area_matrix_vec = np.ravel(area_matrix)[okR_8]
+    
+    area_int_flux_hycom_exp[N] = np.nansum(sshla_vec * area_matrix_vec)/np.nansum(area_matrix_vec)
+    
+    okRR = np.argsort(RR_norm)
+    sshla_vec_interp = np.interp(RR_norm_bins,RR_norm[okRR],sshla_vec[okRR])
+    
+    for n in np.arange(1,len(RR_norm_bins)):
+        print(n)
+        okR = np.logical_and(RR_norm >= RR_norm_bins[n-1],RR_norm <= RR_norm_bins[n])
+        '''
+        sshla_vec_max_hycom_exp[N,n] = np.nanmax(sshla_vec[okR])
+        sshla_vec_mean_hycom_exp[N,n] = np.nanmean(sshla_vec[okR])
+        sshla_vec_min_hycom_exp[N,n] = np.nanmin(sshla_vec[okR])
+        '''
+        maxv = np.nanmean(sshla_vec[okR]) + 2*np.nanstd(sshla_vec[okR])
+        minv = np.nanmean(sshla_vec[okR]) - 2*np.nanstd(sshla_vec[okR])
+        okk = np.logical_and(sshla_vec[okR] >= minv,sshla_vec[okR] <= maxv)
+        sshla_vec_max_hycom_exp[N,n] = np.nanmax(sshla_vec[okR][okk])
+        sshla_vec_mean_hycom_exp[N,n] = np.nanmean(sshla_vec[okR][okk])
+        sshla_vec_min_hycom_exp[N,n] = np.nanmin(sshla_vec[okR][okk])
+        
+    plt.figure()
+    plt.plot(RR_norm[okRR],sshla_vec[okRR],'.')
+    plt.plot(RR_norm_bins_mid,sshla_vec_max_hycom_exp[N,1:],'.-')
+    plt.plot(RR_norm_bins_mid,sshla_vec_min_hycom_exp[N,1:],'.-')
+    plt.plot(RR_norm_bins_mid,sshla_vec_mean_hycom_exp[N,1:],'.-')
+    
+    sshla_vec = np.ravel(sea_surf_heat_loss_area_hurr)[okR_8]
+    c = sshla_vec
+    fig,ax = plt.subplots()
+    plt.scatter(lat_lon_matrix[0][okR_8],lat_lon_matrix[1][okR_8],c=c,cmap='YlOrRd',vmin=0,vmax=0.8)
+    c=plt.colorbar()
+    c.set_label('$KJ/cm^2$',rotation=90, labelpad=15, fontsize=14)
+    plt.title('Sea Surface Heat Loss per area on ' + str(time_hwrf[0])[0:13] + '\n HWRF2020-HYCOM (IC RTOFS)',fontsize=15)
+    plt.plot(eye_lon[0],eye_lat[0],'*k',markersize=10)
+    plt.plot(lon_forec_track_hycom_exp,lat_forec_track_hycom_exp,'.-k') 
+    plt.plot(lat_lon_matrix[0][okR1],lat_lon_matrix[1][okR1],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR2],lat_lon_matrix[1][okR2],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR3],lat_lon_matrix[1][okR3],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR4],lat_lon_matrix[1][okR4],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR5],lat_lon_matrix[1][okR5],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR6],lat_lon_matrix[1][okR6],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR7],lat_lon_matrix[1][okR7],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR8],lat_lon_matrix[1][okR8],'.k',markersize=1)
+    plt.plot(lon_maxwind,lat_maxwind,'*k',markersize=10)  
+    plt.axis('scaled') 
+    plt.xlim(np.min(lat_lon_matrix[0][okR_8])-0.1,np.max(lat_lon_matrix[0][okR_8])+0.1) 
+    plt.ylim(np.min(lat_lon_matrix[1][okR_8])-0.1,np.max(lat_lon_matrix[1][okR_8])+0.1)  
+    #ax.text(np.min(lat_lon_matrix[0][okR8]),np.min(lat_lon_matrix[1][okR8])-0.6,\
+    #        'Rmax = ' + str(np.round(Rmax,2)) + ' Km',fontsize=14)
+            
+#%%
+
+for N in np.arange(3):
+    '''
+    aif_pom_oper = str(format(area_int_flux_pom_oper[N],'0.2E'))
+    aif_pom_exp = str(format(area_int_flux_pom_exp[N],'0.2E'))
+    aif_hycom_exp = str(format(area_int_flux_hycom_exp[N],'0.2E'))
+    '''
+    aif_pom_oper = str(format(area_int_flux_pom_oper[N],'0.2')) + ' Kj/cm^2'
+    aif_pom_exp = str(format(area_int_flux_pom_exp[N],'0.2')) + ' Kj/cm^2'
+    aif_hycom_exp = str(format(area_int_flux_hycom_exp[N],'0.2')) + ' Kj/cm^2'
+    
+    fig,ax = plt.subplots() 
+    plt.plot(RR_norm_bins_mid,sshla_vec_mean_pom_oper[N,1:],'X-',color='mediumorchid',\
+             label='HWRF2019-POM (IC clim.) '+aif_pom_oper,markeredgecolor='k',markersize=7)
+    plt.plot(RR_norm_bins_mid,sshla_vec_max_pom_oper[N,1:],'-',color='mediumorchid',alpha=0.5)
+    plt.plot(RR_norm_bins_mid,sshla_vec_min_pom_oper[N,1:],'-',color='mediumorchid',alpha=0.5)
+    ax.fill_between(RR_norm_bins_mid,sshla_vec_min_pom_oper[N,1:],sshla_vec_max_pom_oper[N,1:],color='mediumorchid',alpha=0.1)
+    
+    plt.plot(RR_norm_bins_mid,sshla_vec_mean_pom_exp[N,1:],'^-',color='teal',\
+             label='HWRF2020-POM (IC RTOFS) '+aif_pom_exp,markeredgecolor='k',markersize=7)
+    plt.plot(RR_norm_bins_mid,sshla_vec_max_pom_exp[N,1:],'-',color='teal',alpha=0.5)
+    plt.plot(RR_norm_bins_mid,sshla_vec_min_pom_exp[N,1:],'-',color='teal',alpha=0.5)
+    ax.fill_between(RR_norm_bins_mid,sshla_vec_min_pom_exp[N,1:],sshla_vec_max_pom_exp[N,1:],color='teal',alpha=0.1)
+    
+    plt.plot(RR_norm_bins_mid,sshla_vec_mean_hycom_exp[N,1:],'^-',color='darkorange',\
+             label='HWRF2020-HYCOM (IC RTOFS) '+aif_hycom_exp,markeredgecolor='k',markersize=7)
+    plt.plot(RR_norm_bins_mid,sshla_vec_max_hycom_exp[N,1:],'-',color='darkorange',alpha=0.5)
+    plt.plot(RR_norm_bins_mid,sshla_vec_min_hycom_exp[N,1:],'-',color='darkorange',alpha=0.5)
+    ax.fill_between(RR_norm_bins_mid,sshla_vec_min_hycom_exp[N,1:],sshla_vec_max_hycom_exp[N,1:],color='darkorange',alpha=0.1)
+    
+    plt.title('Sea Surface Heat Loss per area on ' + str(time[N])[2:15],fontsize=16)
+    plt.ylim(0,1.8)
+    plt.ylabel('$KJ/cm^2$',fontsize=14)
+    plt.xlabel('r/Rmax',fontsize=14)
+    plt.xticks(np.arange(9))
+    plt.legend()
+    
 #%% Figure forecasted intensity models vs best intensity
 
 okt = np.logical_and(time_best_track >= tini,time_best_track <= tend)
@@ -431,20 +775,297 @@ plt.grid(True)
 file = folder_fig + 'best_intensity_vs_forec_intensity2_' + cycle 
 plt.savefig(file,bbox_inches = 'tight',pad_inches = 0.1) 
 
+
+############################################### 
+#%% Acumulated heat fluxes
+
+max_flux1 = []
+max_flux2 = []
+max_flux3 = []
+max_flux4 = []
+time_hwrf = []
+for N,file in enumerate(HWRF_POM_oper[1:]):
+    print(N)
+    HWRF = xr.open_dataset(file)
+    lat_hwrf = np.asarray(HWRF.variables['latitude'][:])
+    lon_hwrf = np.asarray(HWRF.variables['longitude'][:])
+    time_hwrf.append(np.asarray(HWRF.variables['time'][:]))
+    UGRD_hwrf = np.asarray(HWRF.variables['UGRD_10maboveground'][0,:,:])
+    VGRD_hwrf = np.asarray(HWRF.variables['VGRD_10maboveground'][0,:,:])
+    SHTFL_hwrf = np.asarray(HWRF.variables['SHTFL_surface'][0,:,:])
+    LHTFL_hwrf = np.asarray(HWRF.variables['LHTFL_surface'][0,:,:])
+    enth_hwrf = SHTFL_hwrf + LHTFL_hwrf
+    
+    okflux = np.where(enth_hwrf == np.max(enth_hwrf))
+    max_flux1.append(enth_hwrf[okflux[0][0],okflux[1][0]]) # units watts/m^2
+    
+    wind_int = np.sqrt(UGRD_hwrf**2 + VGRD_hwrf**2)
+    max_wind= np.max(wind_int)
+    okwind = np.where(wind_int == max_wind)
+    max_flux2.append(enth_hwrf[okwind[0][0],okwind[1][0]]) # units watts/m^2
+    
+    xlim = [lon_forec_track_pom_oper[N]-2,lon_forec_track_pom_oper[N]+2]
+    ylim = [lat_forec_track_pom_oper[N]-2,lat_forec_track_pom_oper[N]+2]
+    
+    oklon = np.where(np.logical_and(lon_hwrf>xlim[0],lon_hwrf<xlim[1]))[0]
+    oklat = np.where(np.logical_and(lat_hwrf>ylim[0],lat_hwrf<ylim[1]))[0]
+    max_flux3.append(np.mean(enth_hwrf[oklat,:][:,oklon])) # units watts/m^2
+    
+    max_flux4.append(np.sum(enth_hwrf[oklat,:][:,oklon])*(0.015*111*10**3)**2) # units watts
+        
+time_hwrf = np.asarray(time_hwrf)
+timestamp_hwrf = mdates.date2num(time_hwrf)[:,0]
+max_flux1_POM_oper = np.asarray(max_flux1)
+max_flux2_POM_oper = np.asarray(max_flux2)
+max_flux3_POM_oper = np.asarray(max_flux3)
+max_flux4_POM_oper = np.asarray(max_flux4)
+
+int_max_flux1_POM_oper_area1 = np.trapz(max_flux1_POM_oper[0:10],timestamp_hwrf[0:10])*3600*10**-7
+int_max_flux2_POM_oper_area1 = np.trapz(max_flux2_POM_oper[0:10],timestamp_hwrf[0:10])*3600*10**-7
+int_max_flux3_POM_oper_area1 = np.trapz(max_flux3_POM_oper[0:10],timestamp_hwrf[0:10])*3600*10**-7
+int_max_flux4_POM_oper_area1 = np.trapz(max_flux4_POM_oper[0:10],timestamp_hwrf[0:10])*3600*10**-7
+
+int_max_flux1_POM_oper_area2 = np.trapz(max_flux1_POM_oper[0:26],timestamp_hwrf[0:26])*3600*10**-7
+int_max_flux2_POM_oper_area2 = np.trapz(max_flux2_POM_oper[0:26],timestamp_hwrf[0:26])*3600*10**-7
+int_max_flux3_POM_oper_area2 = np.trapz(max_flux3_POM_oper[0:26],timestamp_hwrf[0:26])*3600*10**-7
+int_max_flux4_POM_oper_area2 = np.trapz(max_flux4_POM_oper[0:26],timestamp_hwrf[0:26])*3600*10**-7
+
+#%% Acumulated heat fluxes
+
+max_flux1 = []
+max_flux2 = []
+max_flux3 = []
+max_flux4 = []
+time_hwrf = []
+for N,file in enumerate(HWRF_POM_exp[1:]):
+    print(N)
+    HWRF = xr.open_dataset(file)
+    lat_hwrf = np.asarray(HWRF.variables['latitude'][:])
+    lon_hwrf = np.asarray(HWRF.variables['longitude'][:])
+    time_hwrf.append(np.asarray(HWRF.variables['time'][:]))
+    UGRD_hwrf = np.asarray(HWRF.variables['UGRD_10maboveground'][0,:,:])
+    VGRD_hwrf = np.asarray(HWRF.variables['VGRD_10maboveground'][0,:,:])
+    SHTFL_hwrf = np.asarray(HWRF.variables['SHTFL_surface'][0,:,:])
+    LHTFL_hwrf = np.asarray(HWRF.variables['LHTFL_surface'][0,:,:])
+    enth_hwrf = SHTFL_hwrf + LHTFL_hwrf
+    
+    okflux = np.where(enth_hwrf == np.max(enth_hwrf))
+    max_flux1.append(enth_hwrf[okflux[0][0],okflux[1][0]])
+    
+    wind_int = np.sqrt(UGRD_hwrf**2 + VGRD_hwrf**2)
+    max_wind= np.max(wind_int)
+    okwind = np.where(wind_int == max_wind)
+    max_flux2.append(enth_hwrf[okwind[0][0],okwind[1][0]])
+    
+    xlim = [lon_forec_track_pom_oper[N]-2,lon_forec_track_pom_oper[N]+2]
+    ylim = [lat_forec_track_pom_oper[N]-2,lat_forec_track_pom_oper[N]+2]
+    
+    oklon = np.where(np.logical_and(lon_hwrf>xlim[0],lon_hwrf<xlim[1]))[0]
+    oklat = np.where(np.logical_and(lat_hwrf>ylim[0],lat_hwrf<ylim[1]))[0]
+    max_flux3.append(np.mean(enth_hwrf[oklat,:][:,oklon]))
+    
+    max_flux4.append(np.sum(enth_hwrf[oklat,:][:,oklon])*(0.015*111*10**3)**2) # units watts
+    
+time_hwrf = np.asarray(time_hwrf)
+timestamp_hwrf = mdates.date2num(time_hwrf)[:,0]
+max_flux1_POM_exp = np.asarray(max_flux1)
+max_flux2_POM_exp = np.asarray(max_flux2)
+max_flux3_POM_exp = np.asarray(max_flux3)
+max_flux4_POM_exp = np.asarray(max_flux4)
+
+int_max_flux1_POM_exp_area1 = np.trapz(max_flux1_POM_exp[0:10],timestamp_hwrf[0:10])*3600*10**-7
+int_max_flux2_POM_exp_area1 = np.trapz(max_flux2_POM_exp[0:10],timestamp_hwrf[0:10])*3600*10**-7
+int_max_flux3_POM_exp_area1 = np.trapz(max_flux3_POM_exp[0:10],timestamp_hwrf[0:10])*3600*10**-7
+int_max_flux4_POM_exp_area1 = np.trapz(max_flux4_POM_exp[0:10],timestamp_hwrf[0:10])*360*10**-70
+
+int_max_flux1_POM_exp_area2 = np.trapz(max_flux1_POM_exp[0:26],timestamp_hwrf[0:26])*3600*10**-7
+int_max_flux2_POM_exp_area2 = np.trapz(max_flux2_POM_exp[0:26],timestamp_hwrf[0:26])*3600*10**-7
+int_max_flux3_POM_exp_area2 = np.trapz(max_flux3_POM_exp[0:26],timestamp_hwrf[0:26])*3600*10**-7
+int_max_flux4_POM_exp_area2 = np.trapz(max_flux4_POM_exp[0:26],timestamp_hwrf[0:26])*3600*10**-7
+
+#%% Acumulated heat fluxes
+
+max_flux1 = []
+max_flux2 = []
+max_flux3 = []
+max_flux4 = []
+time_hwrf = []
+for N,file in enumerate(HWRF_HYCOM_exp[1:]):
+    print(N)
+    HWRF = xr.open_dataset(file)
+    lat_hwrf = np.asarray(HWRF.variables['latitude'][:])
+    lon_hwrf = np.asarray(HWRF.variables['longitude'][:])
+    time_hwrf.append(np.asarray(HWRF.variables['time'][:]))
+    UGRD_hwrf = np.asarray(HWRF.variables['UGRD_10maboveground'][0,:,:])
+    VGRD_hwrf = np.asarray(HWRF.variables['VGRD_10maboveground'][0,:,:])
+    SHTFL_hwrf = np.asarray(HWRF.variables['SHTFL_surface'][0,:,:])
+    LHTFL_hwrf = np.asarray(HWRF.variables['LHTFL_surface'][0,:,:])
+    enth_hwrf = SHTFL_hwrf + LHTFL_hwrf
+    
+    okflux = np.where(enth_hwrf == np.max(enth_hwrf))
+    max_flux1.append(enth_hwrf[okflux[0][0],okflux[1][0]])
+    
+    wind_int = np.sqrt(UGRD_hwrf**2 + VGRD_hwrf**2)
+    max_wind= np.max(wind_int)
+    okwind = np.where(wind_int == max_wind)
+    max_flux2.append(enth_hwrf[okwind[0][0],okwind[1][0]])
+    
+    xlim = [lon_forec_track_pom_oper[N]-2,lon_forec_track_pom_oper[N]+2]
+    ylim = [lat_forec_track_pom_oper[N]-2,lat_forec_track_pom_oper[N]+2]
+    
+    oklon = np.where(np.logical_and(lon_hwrf>xlim[0],lon_hwrf<xlim[1]))[0]
+    oklat = np.where(np.logical_and(lat_hwrf>ylim[0],lat_hwrf<ylim[1]))[0]
+    max_flux3.append(np.mean(enth_hwrf[oklat,:][:,oklon]))
+    
+    max_flux4.append(np.sum(enth_hwrf[oklat,:][:,oklon])*(0.015*111*10**3)**2) # units watts
+           
+time_hwrf = np.asarray(time_hwrf)
+timestamp_hwrf = mdates.date2num(time_hwrf)[:,0]
+max_flux1_HYCOM_exp = np.asarray(max_flux1)
+max_flux2_HYCOM_exp = np.asarray(max_flux2)
+max_flux3_HYCOM_exp = np.asarray(max_flux3)
+max_flux4_HYCOM_exp = np.asarray(max_flux4)
+
+int_max_flux1_HYCOM_exp_area1 = np.trapz(max_flux1_HYCOM_exp[0:10],timestamp_hwrf[0:10])*3600*10**-7
+int_max_flux2_HYCOM_exp_area1 = np.trapz(max_flux2_HYCOM_exp[0:10],timestamp_hwrf[0:10])*3600*10**-7
+int_max_flux3_HYCOM_exp_area1 = np.trapz(max_flux3_HYCOM_exp[0:10],timestamp_hwrf[0:10])*3600*10**-7
+int_max_flux4_HYCOM_exp_area1 = np.trapz(max_flux4_HYCOM_exp[0:10],timestamp_hwrf[0:10])*3600*10**-7
+
+int_max_flux1_HYCOM_exp_area2 = np.trapz(max_flux1_HYCOM_exp[0:26],timestamp_hwrf[0:26])*3600*10**-7
+int_max_flux2_HYCOM_exp_area2 = np.trapz(max_flux2_HYCOM_exp[0:26],timestamp_hwrf[0:26])*3600*10**-7
+int_max_flux3_HYCOM_exp_area2 = np.trapz(max_flux3_HYCOM_exp[0:26],timestamp_hwrf[0:26])*3600*10**-7
+int_max_flux4_HYCOM_exp_area2 = np.trapz(max_flux4_HYCOM_exp[0:26],timestamp_hwrf[0:26])*3600*10**-7
+
+#%% Max fluxes
+    
+fig,ax = plt.subplots(figsize=(10, 5))
+plt.plot(time_hwrf,max_flux1_POM_oper,'X-',color='mediumorchid',label='HWRF2010-POM (IC Clim.)',markeredgecolor='k',markersize=7)
+plt.plot(time_hwrf,max_flux1_POM_exp,'^-',color='teal',label='HWRF2020-POM (IC RTOFS)',markeredgecolor='k',markersize=7)
+plt.plot(time_hwrf,max_flux1_HYCOM_exp,'H-',color='darkorange',label='HWRF2020-HYCOM (IC RTOFS)',markeredgecolor='k',markersize=7)
+ax.fill_between(time_hwrf[0:10][:,0],max_flux1_POM_oper[0:10],np.tile(0,10),color='mediumorchid',alpha=0.1)
+ax.fill_between(time_hwrf[0:10][:,0],max_flux1_POM_exp[0:10],np.tile(0,10),color='teal',alpha=0.1)
+ax.fill_between(time_hwrf[0:10][:,0],max_flux1_HYCOM_exp[0:10],np.tile(0,10),color='darkorange',alpha=0.1)
+plt.legend(loc='upper left')
+ax.text(time_hwrf[3],50,format(int_max_flux1_POM_oper_area1,'0.2e')+' $j/m^2$',color='mediumorchid',size=14)
+ax.text(time_hwrf[3],200,format(int_max_flux1_POM_exp_area1,'0.2e')+' $j/m^2$',color='teal',size=14)
+ax.text(time_hwrf[3],350,format(int_max_flux1_HYCOM_exp_area1,'0.2e')+' $j/m^2$',color='darkorange',size=14)
+plt.title('Maximum Enthalpy Flux',size=16)
+
+#%% Max fluxes
+    
+fig,ax = plt.subplots(figsize=(10, 5))
+plt.plot(time_hwrf,max_flux1_POM_oper,'X-',color='mediumorchid',label='HWRF2010-POM (IC Clim.)',markeredgecolor='k',markersize=7)
+plt.plot(time_hwrf,max_flux1_POM_exp,'^-',color='teal',label='HWRF2020-POM (IC RTOFS)',markeredgecolor='k',markersize=7)
+plt.plot(time_hwrf,max_flux1_HYCOM_exp,'H-',color='darkorange',label='HWRF2020-HYCOM (IC RTOFS)',markeredgecolor='k',markersize=7)
+ax.fill_between(time_hwrf[0:26][:,0],max_flux1_POM_oper[0:26],np.tile(0,26),color='mediumorchid',alpha=0.1)
+ax.fill_between(time_hwrf[0:26][:,0],max_flux1_POM_exp[0:26],np.tile(0,26),color='teal',alpha=0.1)
+ax.fill_between(time_hwrf[0:26][:,0],max_flux1_HYCOM_exp[0:26],np.tile(0,26),color='darkorange',alpha=0.1)
+plt.legend(loc='upper left')
+ax.text(time_hwrf[13],50,format(int_max_flux1_POM_oper_area2,'0.2e')+' $j/m^2$',color='mediumorchid',size=14)
+ax.text(time_hwrf[13],200,format(int_max_flux1_POM_exp_area2,'0.2e')+' $j/m^2$',color='teal',size=14)
+ax.text(time_hwrf[13],350,format(int_max_flux1_HYCOM_exp_area2,'0.2e')+' $j/m^2$',color='darkorange',size=14)
+plt.title('Maximum Enthalpy Flux',size=16)
+
+#%% fluxes at max wind
+    
+fig,ax = plt.subplots(figsize=(10, 5))
+plt.plot(time_hwrf,max_flux2_POM_oper,'X-',color='mediumorchid',label='HWRF2010-POM (IC Clim.)',markeredgecolor='k',markersize=7)
+plt.plot(time_hwrf,max_flux2_POM_exp,'^-',color='teal',label='HWRF2020-POM (IC RTOFS)',markeredgecolor='k',markersize=7)
+plt.plot(time_hwrf,max_flux2_HYCOM_exp,'H-',color='darkorange',label='HWRF2020-HYCOM (IC RTOFS)',markeredgecolor='k',markersize=7)
+ax.fill_between(time_hwrf[0:10][:,0],max_flux2_POM_oper[0:10],np.tile(0,10),color='mediumorchid',alpha=0.1)
+ax.fill_between(time_hwrf[0:10][:,0],max_flux2_POM_exp[0:10],np.tile(0,10),color='teal',alpha=0.1)
+ax.fill_between(time_hwrf[0:10][:,0],max_flux2_HYCOM_exp[0:10],np.tile(0,10),color='darkorange',alpha=0.1)
+plt.legend(loc='upper left')
+ax.text(time_hwrf[3],50,format(int_max_flux2_POM_oper_area1,'0.2e')+' $j/m^2$',color='mediumorchid',size=14)
+ax.text(time_hwrf[3],200,format(int_max_flux2_POM_exp_area1,'0.2e')+' $j/m^2$',color='teal',size=14)
+ax.text(time_hwrf[3],350,format(int_max_flux2_HYCOM_exp_area1,'0.2e')+' $j/m^2$',color='darkorange',size=14)
+plt.title('Enthalpy Flux at location of Maximum Wind Intensity',size=16)
+
+#%% fluxes at max wind
+    
+fig,ax = plt.subplots(figsize=(10, 5))
+plt.plot(time_hwrf,max_flux2_POM_oper,'X-',color='mediumorchid',label='HWRF2010-POM (IC Clim.)',markeredgecolor='k',markersize=7)
+plt.plot(time_hwrf,max_flux2_POM_exp,'^-',color='teal',label='HWRF2020-POM (IC RTOFS)',markeredgecolor='k',markersize=7)
+plt.plot(time_hwrf,max_flux2_HYCOM_exp,'H-',color='darkorange',label='HWRF2020-HYCOM (IC RTOFS)',markeredgecolor='k',markersize=7)
+ax.fill_between(time_hwrf[0:26][:,0],max_flux2_POM_oper[0:26],np.tile(0,26),color='mediumorchid',alpha=0.1)
+ax.fill_between(time_hwrf[0:26][:,0],max_flux2_POM_exp[0:26],np.tile(0,26),color='teal',alpha=0.1)
+ax.fill_between(time_hwrf[0:26][:,0],max_flux2_HYCOM_exp[0:26],np.tile(0,26),color='darkorange',alpha=0.1)
+plt.legend(loc='upper left')
+ax.text(time_hwrf[13],50,format(int_max_flux2_POM_oper_area2,'0.2e')+' $j/m^2$',color='mediumorchid',size=14)
+ax.text(time_hwrf[13],200,format(int_max_flux2_POM_exp_area2,'0.2e')+' $j/m^2$',color='teal',size=14)
+ax.text(time_hwrf[13],350,format(int_max_flux2_HYCOM_exp_area2,'0.2e')+' $j/m^2$',color='darkorange',size=14)
+plt.title('Enthalpy Flux at location of Maximum Wind Intensity',size=16)
+
+#%% Mean fluxes 
+    
+fig,ax = plt.subplots(figsize=(10, 5))
+plt.plot(time_hwrf,max_flux3_POM_oper,'X-',color='mediumorchid',label='HWRF2010-POM (IC Clim.)',markeredgecolor='k',markersize=7)
+plt.plot(time_hwrf,max_flux3_POM_exp,'^-',color='teal',label='HWRF2020-POM (IC RTOFS)',markeredgecolor='k',markersize=7)
+plt.plot(time_hwrf,max_flux3_HYCOM_exp,'H-',color='darkorange',label='HWRF2020-HYCOM (IC RTOFS)',markeredgecolor='k',markersize=7)
+ax.fill_between(time_hwrf[0:10][:,0],max_flux3_POM_oper[0:10],np.tile(0,10),color='mediumorchid',alpha=0.1)
+ax.fill_between(time_hwrf[0:10][:,0],max_flux3_POM_exp[0:10],np.tile(0,10),color='teal',alpha=0.1)
+ax.fill_between(time_hwrf[0:10][:,0],max_flux3_HYCOM_exp[0:10],np.tile(0,10),color='darkorange',alpha=0.1)
+plt.legend(loc='lower right')
+plt.ylabel('$W/m^2$',fontsize=14)
+ax.text(time_hwrf[3],50,format(int_max_flux3_POM_oper_area1,'0.2e')+' $KJ/cm^2$',color='mediumorchid',size=14)
+ax.text(time_hwrf[3],100,format(int_max_flux3_POM_exp_area1,'0.2e')+' $KJ/cm^2$',color='teal',size=14)
+ax.text(time_hwrf[3],150,format(int_max_flux3_HYCOM_exp_area1,'0.2e')+' $KJ/cm^2$',color='darkorange',size=14)
+plt.title('Mean Enthalpy Flux +- 2 Degrees around the Eye',size=16)
+
+#%% Mean fluxes
+    
+fig,ax = plt.subplots(figsize=(10, 5))
+plt.plot(time_hwrf,max_flux3_POM_oper,'X-',color='mediumorchid',label='HWRF2010-POM (IC Clim.)',markeredgecolor='k',markersize=7)
+plt.plot(time_hwrf,max_flux3_POM_exp,'^-',color='teal',label='HWRF2020-POM (IC RTOFS)',markeredgecolor='k',markersize=7)
+plt.plot(time_hwrf,max_flux3_HYCOM_exp,'H-',color='darkorange',label='HWRF2020-HYCOM (IC RTOFS)',markeredgecolor='k',markersize=7)
+ax.fill_between(time_hwrf[0:26][:,0],max_flux3_POM_oper[0:26],np.tile(0,26),color='mediumorchid',alpha=0.1)
+ax.fill_between(time_hwrf[0:26][:,0],max_flux3_POM_exp[0:26],np.tile(0,26),color='teal',alpha=0.1)
+ax.fill_between(time_hwrf[0:26][:,0],max_flux3_HYCOM_exp[0:26],np.tile(0,26),color='darkorange',alpha=0.1)
+plt.legend(loc='lower right')
+plt.ylabel('$W/m^2$',fontsize=14)
+ax.text(time_hwrf[11],50,format(int_max_flux3_POM_oper_area2,'0.2e')+' $KJ/cm^2$',color='mediumorchid',size=14)
+ax.text(time_hwrf[11],100,format(int_max_flux3_POM_exp_area2,'0.2e')+' $KJ/cm^2$',color='teal',size=14)
+ax.text(time_hwrf[11],150,format(int_max_flux3_HYCOM_exp_area2,'0.2e')+' $KJ/cm^2$',color='darkorange',size=14)
+plt.title('Mean Enthalpy Flux +- 2 Degrees around the Eye',size=16)
+
+#%% total power: j/s
+    
+fig,ax = plt.subplots(figsize=(10, 5))
+plt.plot(time_hwrf,max_flux4_POM_oper,'X-',color='mediumorchid',label='HWRF2010-POM (IC Clim.)',markeredgecolor='k',markersize=7)
+plt.plot(time_hwrf,max_flux4_POM_exp,'^-',color='teal',label='HWRF2020-POM (IC RTOFS)',markeredgecolor='k',markersize=7)
+plt.plot(time_hwrf,max_flux4_HYCOM_exp,'H-',color='darkorange',label='HWRF2020-HYCOM (IC RTOFS)',markeredgecolor='k',markersize=7)
+ax.fill_between(time_hwrf[0:10][:,0],max_flux4_POM_oper[0:10],np.tile(0,10),color='mediumorchid',alpha=0.1)
+ax.fill_between(time_hwrf[0:10][:,0],max_flux4_POM_exp[0:10],np.tile(0,10),color='teal',alpha=0.1)
+ax.fill_between(time_hwrf[0:10][:,0],max_flux4_HYCOM_exp[0:10],np.tile(0,10),color='darkorange',alpha=0.1)
+plt.legend(loc='lower right')
+ax.text(time_hwrf[3],0,format(int_max_flux4_POM_oper_area1,'0.2e')+' $J$',color='mediumorchid',size=14)
+ax.text(time_hwrf[3],10**13,format(int_max_flux4_POM_exp_area1,'0.2e')+' $J$',color='teal',size=14)
+ax.text(time_hwrf[3],2*10**13,format(int_max_flux4_HYCOM_exp_area1,'0.2e')+' $J$',color='darkorange',size=14)
+plt.title('Total Power (j/s) +- 2 Degrees around the Eye',size=16)
+
+#%% total power: j/s
+    
+fig,ax = plt.subplots(figsize=(10, 5))
+plt.plot(time_hwrf,max_flux4_POM_oper,'X-',color='mediumorchid',label='HWRF2010-POM (IC Clim.)',markeredgecolor='k',markersize=7)
+plt.plot(time_hwrf,max_flux4_POM_exp,'^-',color='teal',label='HWRF2020-POM (IC RTOFS)',markeredgecolor='k',markersize=7)
+plt.plot(time_hwrf,max_flux4_HYCOM_exp,'H-',color='darkorange',label='HWRF2020-HYCOM (IC RTOFS)',markeredgecolor='k',markersize=7)
+ax.fill_between(time_hwrf[0:26][:,0],max_flux4_POM_oper[0:26],np.tile(0,26),color='mediumorchid',alpha=0.1)
+ax.fill_between(time_hwrf[0:26][:,0],max_flux4_POM_exp[0:26],np.tile(0,26),color='teal',alpha=0.1)
+ax.fill_between(time_hwrf[0:26][:,0],max_flux4_HYCOM_exp[0:26],np.tile(0,26),color='darkorange',alpha=0.1)
+plt.legend(loc='lower right')
+ax.text(time_hwrf[11],0,format(int_max_flux4_POM_oper_area2,'0.2e')+' $J$',color='mediumorchid',size=14)
+ax.text(time_hwrf[11],10**13,format(int_max_flux4_POM_exp_area2,'0.2e')+' $J$',color='teal',size=14)
+ax.text(time_hwrf[11],2*10**13,format(int_max_flux4_HYCOM_exp_area2,'0.2e')+' $J$',color='darkorange',size=14)
+plt.title('Total Power (j/s) +- 2 Degrees around the Eye',size=16)
+
+
+
 #%% map wind vectors HWRP2019-POM operational
 
 N = 5
-#kw = dict(levels=np.linspace(0,900,10))
-kw = dict(levels=np.linspace(0,1100,12))
-ylim = [13,25]
-xlim = [-72,-63]
-
-'''
-N = 22
-kw = dict(levels=np.linspace(0,1100,12))
-ylim = [16,28]
-xlim = [-74,-65]
-'''
+kw = dict(levels=np.linspace(0,1200,13))
+ylim = [17,18]
+xlim = [-65.5,-64.5]
 
 file = HWRF_POM_oper[N]
 HWRF = xr.open_dataset(file)
@@ -460,12 +1081,13 @@ enth_hwrf = SHTFL_hwrf + LHTFL_hwrf
 fig,ax = plt.subplots(figsize=(5,5)) 
 plt.contour(bath_lon,bath_lat,bath_elev,[0],colors='k')   
 plt.contourf(lon_hwrf,lat_hwrf,enth_hwrf,cmap='RdYlBu_r',**kw)
-c = plt.colorbar()
-q = plt.quiver(lon_hwrf[::30], lat_hwrf[::30],UGRD_hwrf[::30,::30],VGRD_hwrf[::30,::30]) #,units='xy' ,scale=0.01)
-#plt.quiverkey(q,-61,25.5,30,"30 m/s",coordinates='data',color='k',fontproperties={'size': 14})
-plt.quiverkey(q,-63.0,28.5,30,"30 m/s",coordinates='data',color='k',fontproperties={'size': 14})
+c = plt.colorbar(shrink=0.8)
+#q = plt.quiver(lon_hwrf[::30], lat_hwrf[::30],UGRD_hwrf[::30,::30],VGRD_hwrf[::30,::30]) #,units='xy' ,scale=0.01)
+#plt.quiverkey(q,-63.0,28.5,30,"30 m/s",coordinates='data',color='k',fontproperties={'size': 14})
+q = plt.quiver(lon_hwrf[::5], lat_hwrf[::5],UGRD_hwrf[::5,::5],VGRD_hwrf[::5,::5],scale=400)#,units='xy' ,scale=0.01)
+plt.quiverkey(q,-64.36,18.05,30,"30 m/s",coordinates='data',color='k',fontproperties={'size': 14})
 plt.title('HWRF2019-POM Enthalpy Flux \n on '+str(t_hwrf[0])[0:13],fontsize=14)
-c.set_label('$W/m^2$',rotation=90, labelpad=1, fontsize=16)
+c.set_label('$W/m^2$',rotation=90, labelpad=1, fontsize=14)
 c.ax.tick_params(labelsize=14)
 plt.axis('scaled')
 plt.ylim([ylim[0],ylim[1]])
@@ -490,10 +1112,10 @@ enth_hwrf = SHTFL_hwrf + LHTFL_hwrf
 fig,ax = plt.subplots(figsize=(5,5)) 
 plt.contour(bath_lon,bath_lat,bath_elev,[0],colors='k')   
 plt.contourf(lon_hwrf,lat_hwrf,enth_hwrf,cmap='RdYlBu_r',**kw)
-c = plt.colorbar()
-q = plt.quiver(lon_hwrf[::30], lat_hwrf[::30],UGRD_hwrf[::30,::30],VGRD_hwrf[::30,::30]) #,units='xy' ,scale=0.01)
-#plt.quiverkey(q,-61,25.5,30,"30 m/s",coordinates='data',color='k',fontproperties={'size': 14})
-plt.quiverkey(q,-63.0,28.5,30,"30 m/s",coordinates='data',color='k',fontproperties={'size': 14})
+c = plt.colorbar(shrink=0.8)
+#q = plt.quiver(lon_hwrf[::30], lat_hwrf[::30],UGRD_hwrf[::30,::30],VGRD_hwrf[::30,::30]) #,units='xy' ,scale=0.01)
+q = plt.quiver(lon_hwrf[::5], lat_hwrf[::5],UGRD_hwrf[::5,::5],VGRD_hwrf[::5,::5],scale=400)#,units='xy' ,scale=0.01)
+plt.quiverkey(q,-64.36,18.05,30,"30 m/s",coordinates='data',color='k',fontproperties={'size': 14})
 plt.title('HWRF2020-POM Enthalpy Flux \n on '+str(t_hwrf[0])[0:13],fontsize=14)
 c.set_label('$W/m^2$',rotation=90, labelpad=1, fontsize=16)
 c.ax.tick_params(labelsize=14)
@@ -520,16 +1142,112 @@ enth_hwrf = SHTFL_hwrf + LHTFL_hwrf
 fig,ax = plt.subplots(figsize=(5,5)) 
 plt.contour(bath_lon,bath_lat,bath_elev,[0],colors='k')   
 plt.contourf(lon_hwrf,lat_hwrf,enth_hwrf,cmap='RdYlBu_r',**kw)
-c = plt.colorbar()
-q = plt.quiver(lon_hwrf[::30], lat_hwrf[::30],UGRD_hwrf[::30,::30],VGRD_hwrf[::30,::30]) #,units='xy' ,scale=0.01)
-#plt.quiverkey(q,-61,25.5,30,"30 m/s",coordinates='data',color='k',fontproperties={'size': 14})
-plt.quiverkey(q,-63.0,28.5,30,"30 m/s",coordinates='data',color='k',fontproperties={'size': 14})
+c = plt.colorbar(shrink=0.8)
+q = plt.quiver(lon_hwrf[::5], lat_hwrf[::5],UGRD_hwrf[::5,::5],VGRD_hwrf[::5,::5],scale=400)#,units='xy' ,scale=0.01)
+plt.quiverkey(q,-64.36,18.05,30,"30 m/s",coordinates='data',color='k',fontproperties={'size': 14})
 plt.title('HWRF2020-HYCOM Enthalpy Flux \n on '+str(t_hwrf[0])[0:13],fontsize=14)
 c.set_label('$W/m^2$',rotation=90, labelpad=1, fontsize=16)
 c.ax.tick_params(labelsize=14)
 plt.axis('scaled')
 plt.ylim([ylim[0],ylim[1]])
 plt.xlim([xlim[0],xlim[1]])
+
+file_name = folder_fig + 'Dorian_heat_fluxes_HWRF20_HYCOM_' + str(t_hwrf[0])[0:13] + '_' + cycle
+plt.savefig(file_name)#,bbox_inches = 'tight',pad_inches = 0.1) 
+
+#%%
+
+N = 22
+ylim = [24.6,26.1]
+xlim = [-72.5,-71]
+
+file = HWRF_POM_oper[N]
+HWRF = xr.open_dataset(file)
+lat_hwrf = np.asarray(HWRF.variables['latitude'][:])
+lon_hwrf = np.asarray(HWRF.variables['longitude'][:])
+t_hwrf = np.asarray(HWRF.variables['time'][:])
+UGRD_hwrf = np.asarray(HWRF.variables['UGRD_10maboveground'][0,:,:])
+VGRD_hwrf = np.asarray(HWRF.variables['VGRD_10maboveground'][0,:,:])
+SHTFL_hwrf = np.asarray(HWRF.variables['SHTFL_surface'][0,:,:])
+LHTFL_hwrf = np.asarray(HWRF.variables['LHTFL_surface'][0,:,:])
+enth_hwrf = SHTFL_hwrf + LHTFL_hwrf
+
+fig,ax = plt.subplots(figsize=(5,5)) 
+plt.contour(bath_lon,bath_lat,bath_elev,[0],colors='k')   
+plt.contourf(lon_hwrf,lat_hwrf,enth_hwrf,cmap='RdYlBu_r',**kw)
+c = plt.colorbar(shrink=0.8)
+#q = plt.quiver(lon_hwrf[::30], lat_hwrf[::30],UGRD_hwrf[::30,::30],VGRD_hwrf[::30,::30]) #,units='xy' ,scale=0.01)
+q = plt.quiver(lon_hwrf[::5], lat_hwrf[::5],UGRD_hwrf[::5,::5],VGRD_hwrf[::5,::5],scale=400)#,units='xy' ,scale=0.01)
+plt.quiverkey(q,-70.8,26.2,30,"30 m/s",coordinates='data',color='k',fontproperties={'size': 14})
+plt.title('HWRF2019-POM Enthalpy Flux \n on '+str(t_hwrf[0])[0:13],fontsize=14)
+c.set_label('$W/m^2$',rotation=90, labelpad=1, fontsize=14)
+c.ax.tick_params(labelsize=14)
+plt.axis('scaled')
+plt.ylim([ylim[0],ylim[1]])
+plt.xlim([xlim[0],xlim[1]])
+plt.yticks([24.8,25.2,25.6,26])
+
+file_name = folder_fig + 'Dorian_heat_fluxes_HWRF19_POM_' + str(t_hwrf[0])[0:13] + '_' + cycle
+plt.savefig(file_name)#,bbox_inches = 'tight',pad_inches = 0.1) 
+
+#%% map wind vectors HWRP2020-POM experimental
+
+file = HWRF_POM_exp[N]
+HWRF = xr.open_dataset(file)
+lat_hwrf = np.asarray(HWRF.variables['latitude'][:])
+lon_hwrf = np.asarray(HWRF.variables['longitude'][:])
+t_hwrf = np.asarray(HWRF.variables['time'][:])
+UGRD_hwrf = np.asarray(HWRF.variables['UGRD_10maboveground'][0,:,:])
+VGRD_hwrf = np.asarray(HWRF.variables['VGRD_10maboveground'][0,:,:])
+SHTFL_hwrf = np.asarray(HWRF.variables['SHTFL_surface'][0,:,:])
+LHTFL_hwrf = np.asarray(HWRF.variables['LHTFL_surface'][0,:,:])
+enth_hwrf = SHTFL_hwrf + LHTFL_hwrf
+
+fig,ax = plt.subplots(figsize=(5,5)) 
+plt.contour(bath_lon,bath_lat,bath_elev,[0],colors='k')   
+plt.contourf(lon_hwrf,lat_hwrf,enth_hwrf,cmap='RdYlBu_r',**kw)
+c = plt.colorbar(shrink=0.8)
+#q = plt.quiver(lon_hwrf[::30], lat_hwrf[::30],UGRD_hwrf[::30,::30],VGRD_hwrf[::30,::30]) #,units='xy' ,scale=0.01)
+q = plt.quiver(lon_hwrf[::5], lat_hwrf[::5],UGRD_hwrf[::5,::5],VGRD_hwrf[::5,::5],scale=400)#,units='xy' ,scale=0.01)
+plt.quiverkey(q,-70.8,26.2,30,"30 m/s",coordinates='data',color='k',fontproperties={'size': 14})
+plt.title('HWRF2020-POM Enthalpy Flux \n on '+str(t_hwrf[0])[0:13],fontsize=14)
+c.set_label('$W/m^2$',rotation=90, labelpad=1, fontsize=16)
+c.ax.tick_params(labelsize=14)
+plt.axis('scaled')
+plt.ylim([ylim[0],ylim[1]])
+plt.xlim([xlim[0],xlim[1]])
+plt.yticks([24.8,25.2,25.6,26])
+
+file_name = folder_fig + 'Dorian_heat_fluxes_HWRF20_POM_' + str(t_hwrf[0])[0:13] + '_' + cycle
+plt.savefig(file_name)#,bbox_inches = 'tight',pad_inches = 0.1) 
+
+#%% map wind vectors HWRP2020-HYCOM experimental
+
+file = HWRF_HYCOM_exp[N]
+HWRF = xr.open_dataset(file)
+lat_hwrf = np.asarray(HWRF.variables['latitude'][:])
+lon_hwrf = np.asarray(HWRF.variables['longitude'][:])
+t_hwrf = np.asarray(HWRF.variables['time'][:])
+UGRD_hwrf = np.asarray(HWRF.variables['UGRD_10maboveground'][0,:,:])
+VGRD_hwrf = np.asarray(HWRF.variables['VGRD_10maboveground'][0,:,:])
+SHTFL_hwrf = np.asarray(HWRF.variables['SHTFL_surface'][0,:,:])
+LHTFL_hwrf = np.asarray(HWRF.variables['LHTFL_surface'][0,:,:])
+enth_hwrf = SHTFL_hwrf + LHTFL_hwrf
+
+fig,ax = plt.subplots(figsize=(5,5)) 
+plt.contour(bath_lon,bath_lat,bath_elev,[0],colors='k')   
+plt.contourf(lon_hwrf,lat_hwrf,enth_hwrf,cmap='RdYlBu_r',**kw)
+c = plt.colorbar(shrink=0.8)
+#q = plt.quiver(lon_hwrf[::30], lat_hwrf[::30],UGRD_hwrf[::30,::30],VGRD_hwrf[::30,::30]) #,units='xy' ,scale=0.01)
+q = plt.quiver(lon_hwrf[::5], lat_hwrf[::5],UGRD_hwrf[::5,::5],VGRD_hwrf[::5,::5],scale=400)#,units='xy' ,scale=0.01)
+plt.quiverkey(q,-70.8,26.2,30,"30 m/s",coordinates='data',color='k',fontproperties={'size': 14})
+plt.title('HWRF2020-HYCOM Enthalpy Flux \n on '+str(t_hwrf[0])[0:13],fontsize=14)
+c.set_label('$W/m^2$',rotation=90, labelpad=1, fontsize=16)
+c.ax.tick_params(labelsize=14)
+plt.axis('scaled')
+plt.ylim([ylim[0],ylim[1]])
+plt.xlim([xlim[0],xlim[1]])
+plt.yticks([24.8,25.2,25.6,26])
 
 file_name = folder_fig + 'Dorian_heat_fluxes_HWRF20_HYCOM_' + str(t_hwrf[0])[0:13] + '_' + cycle
 plt.savefig(file_name)#,bbox_inches = 'tight',pad_inches = 0.1) 

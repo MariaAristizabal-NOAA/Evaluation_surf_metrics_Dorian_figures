@@ -19,7 +19,11 @@ model3 = 'HWRF2020_HYCOM'
 mtype3 = 'exp'
 atcf_suffix = '.trak.hwrf.atcfunix'
 
-cycles = ['2019082800','2019082806','2019082812','2019082818','2019082900','2019082906','2019082912','2019082918','2019083000','2019083006','2019083012','2019083018','2019083100','2019083106','2019083112','2019083118','2019090100','2019090106']
+cycles = ['2019082800','2019082806','2019082812','2019082818',\
+          '2019082900','2019082906','2019082912','2019082918',\
+          '2019083000','2019083006','2019083012','2019083018',\
+          '2019083100','2019083106','2019083112','2019083118',\
+          '2019090100','2019090106']
 #cycles = ['2019082800','2019082806','2019082812']
 #cycles = ['2019083000','2019083006','2019083012']
 #cycles = ['2019083100']
@@ -119,7 +123,7 @@ for c,cycle in enumerate(cycles):
         lead_time_track2[:] = np.nan
         max_wind_10m_model2 = np.empty(len(time_hwrf2))
         max_wind_10m_model2[:] = np.nan
-        
+
     if len(HWRF3) != 0:
         ff3 = open(HWRF3[0],'r')
         f3 = ff3.readlines()
@@ -148,7 +152,7 @@ for c,cycle in enumerate(cycles):
     time_hwrf1 = np.asarray(time_hwrf1)
     time_hwrf2 = np.asarray(time_hwrf1)
     time_hwrf3 = np.asarray(time_hwrf1)
-    
+
     okt1 = np.logical_and(mdates.date2num(time_best_track) >= mdates.date2num(time_hwrf1[0]),mdates.date2num(time_best_track) <= mdates.date2num(time_hwrf1[-1]))
     okt2 = np.logical_and(mdates.date2num(time_best_track) >= mdates.date2num(time_hwrf2[0]),mdates.date2num(time_best_track) <= mdates.date2num(time_hwrf2[-1]))
     okt3 = np.logical_and(mdates.date2num(time_best_track) >= mdates.date2num(time_hwrf3[0]),mdates.date2num(time_best_track) <= mdates.date2num(time_hwrf3[-1]))
@@ -173,7 +177,7 @@ for c,cycle in enumerate(cycles):
     Int_err_model1[c,oki1] = int_err_model1
     Int_err_model2[c,oki2] = int_err_model2
     Int_err_model3[c,oki3] = int_err_model3
-    
+
     # Rapid intensification
     no_RI1 = time_best_track[okt1] <= datetime(RI_time[0],RI_time[1],RI_time[2],RI_time[3])
     no_RI2 = time_best_track[okt2] <= datetime(RI_time[0],RI_time[1],RI_time[2],RI_time[3])
@@ -186,7 +190,7 @@ for c,cycle in enumerate(cycles):
     Int_err_model1_noRI[c,okn1] = int_err_model1[no_RI1]
     Int_err_model2_noRI[c,okn2] = int_err_model2[no_RI2]
     Int_err_model3_noRI[c,okn3] = int_err_model3[no_RI3]
-    
+
     #%% Intensity error
     from matplotlib.ticker import (MultipleLocator, FormatStrFormatter)
 
@@ -207,7 +211,7 @@ for c,cycle in enumerate(cycles):
     plt.legend(loc='upper left',fontsize=14)
     file_name = figs_dir + 'Dorian_intensity_error_cycle_'+cycle
     plt.savefig(file_name,bbox_inches = 'tight',pad_inches = 0.1)
-    
+
 #%%
 Int_err_model1_noRI_mean = np.nanmean(Int_err_model1_noRI,0)
 Int_err_model1_noRI_min = np.nanmin(Int_err_model1_noRI,0)
@@ -274,4 +278,37 @@ plt.xlabel('Forecast Lead Time (Hr)',fontsize=16)
 plt.legend(loc='lower right',fontsize=14)
 file_name = figs_dir + 'Dorian_mean_intensity_error2-'+cycle[0] + '-'+cycle[-1]
 plt.savefig(file_name,bbox_inches = 'tight',pad_inches = 0.1)
-    
+
+#%%
+lead_time = np.arange(0,132,6)
+
+fig,ax = plt.subplots(figsize=(10, 5))
+plt.ion()
+plt.plot(lead_time[0:15],Int_err_model1_noRI_mean[0:15],'X-',color='mediumorchid',label=model1+' (IC clim.)',markeredgecolor='k',markersize=7)
+ax.fill_between(lead_time[0:15],Int_err_model1_noRI_min[0:15],Int_err_model1_noRI_max[0:15],color='mediumorchid',alpha=0.1)
+plt.plot(lead_time[0:15],Int_err_model1_noRI_min[0:15],'-',color='mediumorchid',alpha=0.5)
+plt.plot(lead_time[0:15],Int_err_model1_noRI_max[0:15],'-',color='mediumorchid',alpha=0.5)
+
+plt.plot(lead_time[0:15],Int_err_model2_noRI_mean[0:15],'^-',color='teal',label=model2+' (IC RTOFS)',markeredgecolor='k',markersize=7)
+ax.fill_between(lead_time[0:15],Int_err_model2_noRI_min[0:15],Int_err_model2_noRI_max[0:15],color='teal',alpha=0.1)
+plt.plot(lead_time[0:15],Int_err_model2_noRI_min[0:15],'-',color='teal',alpha=0.5)
+plt.plot(lead_time[0:15],Int_err_model2_noRI_max[0:15],'-',color='teal',alpha=0.5)
+
+plt.plot(lead_time[0:15],Int_err_model3_noRI_mean[0:15],'H-',color='darkorange',label=model3+' (IC RTOFS)',markeredgecolor='k',markersize=7)
+ax.fill_between(lead_time[0:15],Int_err_model3_noRI_min[0:15],Int_err_model3_noRI_max[0:15],color='darkorange',alpha=0.1)
+plt.plot(lead_time[0:15],Int_err_model3_noRI_min[0:15],'-',color='darkorange',alpha=0.5)
+plt.plot(lead_time[0:15],Int_err_model3_noRI_max[0:15],'-',color='darkorange',alpha=0.5)
+
+#plt.plot(np.tile(lead_time_RI,len(np.arange(50))),np.arange(50),'--k')
+plt.plot(lead_time[0:15],np.tile(0,len(lead_time[0:15])),'--k')
+#plt.xlim([0,126])
+plt.xlim([0,84])
+ax.xaxis.set_major_locator(MultipleLocator(12))
+ax.xaxis.set_major_formatter(FormatStrFormatter('%d'))
+ax.xaxis.set_minor_locator(MultipleLocator(3))
+plt.title('Intensity Forecast Mean Error Dorian (no RI) '+ cycles[0] +'-'+cycles[-1],fontsize=18)
+plt.ylabel('Forecast Error (Kt)',fontsize=16)
+plt.xlabel('Forecast Lead Time (Hr)',fontsize=16)
+plt.legend(loc='upper left',fontsize=13)
+file_name = figs_dir + 'Dorian_mean_intensity_error3_'+cycles[0] + '_'+cycles[-1]
+plt.savefig(file_name,bbox_inches = 'tight',pad_inches = 0.1)
