@@ -7,7 +7,7 @@ Created on Fri May  1 10:20:13 2020
 """
 
 #%% User input
-scratch_dir = '/scratch2/NOS/nosofs/Maria.Aristizabal/'
+scratch_dir = '/scratch2/AOML/aoml-phod/Maria.Aristizabal/'
 figs_dir = '/home/Maria.Aristizabal/Dorian_2019/Figures/'
 storm_name = 'Dorian'
 storm_id = 'dorian05l'
@@ -311,4 +311,42 @@ plt.ylabel('Forecast Error (Kt)',fontsize=16)
 plt.xlabel('Forecast Lead Time (Hr)',fontsize=16)
 plt.legend(loc='upper left',fontsize=13)
 file_name = figs_dir + 'Dorian_mean_intensity_error3_'+cycles[0] + '_'+cycles[-1]
+plt.savefig(file_name,bbox_inches = 'tight',pad_inches = 0.1)
+
+#%% RMSE
+
+RMSE_model1_noRI = np.empty((Int_err_model1_noRI.shape[1]))
+RMSE_model1_noRI[:] = np.nan
+RMSE_model2_noRI = np.empty((Int_err_model2_noRI.shape[1]))
+RMSE_model2_noRI[:] = np.nan
+RMSE_model3_noRI = np.empty((Int_err_model3_noRI.shape[1]))
+RMSE_model3_noRI[:] = np.nan
+for t in range(Int_err_model1_noRI.shape[1]):
+    print(t)
+    RMSE_model1_noRI[t] = np.nansum((Int_err_model1_noRI[:,t])**2)
+    RMSE_model2_noRI[t] = np.nansum((Int_err_model2_noRI[:,t])**2)
+    RMSE_model3_noRI[t] = np.nansum((Int_err_model3_noRI[:,t])**2)
+    
+RMSE_model1_noRI = np.sqrt(RMSE_model1_noRI/Int_err_model1_noRI.shape[1])
+RMSE_model2_noRI = np.sqrt(RMSE_model2_noRI/Int_err_model2_noRI.shape[1])
+RMSE_model3_noRI = np.sqrt(RMSE_model3_noRI/Int_err_model3_noRI.shape[1])
+
+#%%
+lead_time = np.arange(0,132,6)
+
+fig,ax = plt.subplots(figsize=(10, 5))
+plt.ion()
+plt.plot(lead_time[0:15],RMSE_model1_noRI[0:15],'X-',color='mediumorchid',label=model1+' (IC clim.)',markeredgecolor='k',markersize=7)
+plt.plot(lead_time[0:15],RMSE_model2_noRI[0:15],'^-',color='teal',label=model2+' (IC RTOFS)',markeredgecolor='k',markersize=7)
+plt.plot(lead_time[0:15],RMSE_model3_noRI[0:15],'H-',color='darkorange',label=model3+' (IC RTOFS)',markeredgecolor='k',markersize=7)
+plt.ylim([0,20])
+plt.xlim([0,84])
+ax.xaxis.set_major_locator(MultipleLocator(12))
+ax.xaxis.set_major_formatter(FormatStrFormatter('%d'))
+ax.xaxis.set_minor_locator(MultipleLocator(3))
+plt.title('Intensity Forecast RMSE Dorian (no RI) '+ cycles[0] +'-'+cycles[-1],fontsize=18)
+plt.ylabel('Forocasted RMES (Kt)',fontsize=16)
+plt.xlabel('Forecast Lead Time (Hr)',fontsize=16)
+plt.legend(loc='upper left',fontsize=13)
+file_name = figs_dir + 'Dorian_RMSE_intensity_forecast_'+cycles[0] + '_'+cycles[-1]
 plt.savefig(file_name,bbox_inches = 'tight',pad_inches = 0.1)

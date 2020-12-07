@@ -358,3 +358,46 @@ plt.xlabel('Forecast Lead Time (Hr)',fontsize=14)
 
 file = folder_fig + 'intensity_error_' + cycle
 plt.savefig(file,bbox_inches = 'tight',pad_inches = 0.1)
+
+#%% Figure forecasted intensity models vs best intensity
+
+okt = np.logical_and(time_best_track >= tini,time_best_track <= tend)
+
+lead_time_pom_oper = np.arange(0,129,3)
+
+fig,ax1 = plt.subplots(figsize=(10, 5))
+plt.ion()
+plt.plot(lead_time_pom_oper[::2],wind_int_kt[okt],'o-k',label='Best')
+plt.plot(lead_time_pom_oper,max_wind_10m_hwrf_pom19_oper,'X-',color='mediumorchid',label='HWRF2010-POM (IC Clim.)',markeredgecolor='k',markersize=7)
+plt.plot(lead_time_pom_oper,max_wind_10m_hwrf_pom20_exp,'^-',color='teal',label='HWRF2020-POM (IC RTOFS)',markeredgecolor='k',markersize=7)
+plt.plot(lead_time_pom_oper,max_wind_10m_hwrf_hycom20_exp,'H-',color='darkorange',label='HWRF2020-HYCOM (IC RTOFS)',markeredgecolor='k',markersize=7)
+plt.plot(np.tile(15,len(np.arange(0,110))),np.arange(0,110),'--',color='k')
+#plt.plot(np.tile(24,len(np.arange(0,100))),np.arange(0,100),'--',color='grey')
+plt.plot(np.tile(66,len(np.arange(0,110))),np.arange(0,110),'--k')
+
+ax1.tick_params(which='major', width=2)
+ax1.tick_params(which='major', length=7)
+ax1.tick_params(which='minor', length=4, color='k')
+
+ax1.xaxis.set_major_locator(MultipleLocator(12))
+ax1.xaxis.set_major_formatter(FormatStrFormatter('%d'))
+ax1.xaxis.set_minor_locator(MultipleLocator(3))
+ax1.xaxis.set_ticks(np.arange(0,126,12))
+ax1.xaxis.set_ticklabels(['28-Aug \n 0','\n 12','29-Aug \n 24','\n 36','30-Aug \n 48',\
+                          '\n 60','31-Aug \n 72','\n 84','01-Sep \n 96','\n 108','02-Sep \n 120'])
+plt.xlabel('Forecast Lead Time (Hr)',fontsize=14,labelpad=10)
+plt.legend(loc='upper left',fontsize=14)
+plt.ylim([20,165])
+plt.xlim([0,126])
+plt.xticks(np.arange(0,126,12))
+plt.title('Intensity Forecast Dorian '+ cycle,fontsize=18)
+plt.ylabel('Max 10m Wind (kt)',fontsize=14)
+
+ax2 = ax1.twinx()
+plt.ylim([20,165])
+yticks = [64,83,96,113,137]
+plt.yticks(yticks,['Cat 1','Cat 2','Cat 3','Cat 4','Cat 5'])
+plt.grid(True)
+
+file = folder_fig + 'best_intensity_vs_forec_intensity2_' + cycle 
+plt.savefig(file,bbox_inches = 'tight',pad_inches = 0.1) 

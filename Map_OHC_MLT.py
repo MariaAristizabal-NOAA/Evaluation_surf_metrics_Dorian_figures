@@ -31,7 +31,7 @@ bath_file = home_folder+'aristizabal/bathymetry_files/GEBCO_2014_2D_-100.0_0.0_-
 kmz_file_Dorian = home_folder+'aristizabal/KMZ_files/al052019_best_track-5.kmz'
 
 # Folder where to save figure
-folder_fig = home_folder+'aristizabal/Figures/'
+folder_fig = '/www/web/rucool/aristizabal/Figures/'
 
 # folder nc files POM
 folder_pom19 =  home_folder+'aristizabal/HWRF2019_POM_Dorian/'
@@ -545,13 +545,15 @@ for N,indx in enumerate(np.asarray([3,11,14])):
     plt.ylim(np.min(lat_lon_matrix[1][okR_8])-0.1,np.max(lat_lon_matrix[1][okR_8])+0.1)  
     c.set_label('$^oC$',rotation=90, labelpad=15, fontsize=14)
     plt.title('Mixed Layer Temperature ' + str(time_hwrf[0])[0:13] + '\n HWRF2019-POM (IC Clim.)',fontsize=15)
-    
+    '''
     kw = dict(levels=np.arange(27,29.6,0.2))
     fig,ax = plt.subplots()
     plt.contourf(lon_pom_oper[0,oklon_pom],lat_pom_oper[oklat_pom,0],Tmean_dens_crit,cmap=cmocean.cm.thermal,\
                  **kw,vmin=27,vmax=29.5)
     c=plt.colorbar()
-    plt.plot(eye_lon[0],eye_lat[0],'*k',markersize=10)
+    plt.contour(lon_pom_oper[0,oklon_pom],lat_pom_oper[oklat_pom,0],Tmean_dens_crit,\
+                colors='k',linestyle='-',**kw,alpha=0.3)  
+    plt.plot(eye_lon[0],eye_lat[0],'ok',markersize=7,markeredgecolor='lawngreen') 
     plt.plot(lon_forec_track_pom_oper,lat_forec_track_pom_oper,'.-k') 
     plt.plot(lat_lon_matrix[0][okR1],lat_lon_matrix[1][okR1],'.k',markersize=1)
     plt.plot(lat_lon_matrix[0][okR2],lat_lon_matrix[1][okR2],'.k',markersize=1)
@@ -561,12 +563,15 @@ for N,indx in enumerate(np.asarray([3,11,14])):
     plt.plot(lat_lon_matrix[0][okR6],lat_lon_matrix[1][okR6],'.k',markersize=1)
     plt.plot(lat_lon_matrix[0][okR7],lat_lon_matrix[1][okR7],'.k',markersize=1)
     plt.plot(lat_lon_matrix[0][okR8],lat_lon_matrix[1][okR8],'.k',markersize=1)
-    plt.plot(lon_maxwind,lat_maxwind,'*k',markersize=10) 
+    plt.plot(lon_maxwind,lat_maxwind,'*k',markersize=10,markeredgecolor='lawngreen') 
     plt.xlim(np.min(lat_lon_matrix[0][okR_8])-0.1,np.max(lat_lon_matrix[0][okR_8])+0.1) 
     plt.ylim(np.min(lat_lon_matrix[1][okR_8])-0.1,np.max(lat_lon_matrix[1][okR_8])+0.1)  
     c.set_label('$^oC$',rotation=90, labelpad=15, fontsize=14)
     plt.title('Mixed Layer Temperature ' + str(time_hwrf[0])[0:13] + '\n HWRF2019-POM (IC Clim.)',fontsize=15)
+    file_name = folder_fig + 'HWRF2019_POM_Dorian_Temp_MLD_cycle_' + cycle + '_' + str(tpom[0])[0:13] 
+    plt.savefig(file_name,bbox_inches = 'tight',pad_inches = 0.1)
     
+    '''
     Tmean_dens_crit_vec2 = np.ravel(Tmean_dens_crit)
     Tmean_dens_crit_vec2[okR_pom_larger_8] = np.nan
     Tmean_dens_crit2 = np.reshape(Tmean_dens_crit_vec2,(Tmean_dens_crit.shape[0],Tmean_dens_crit.shape[1]))
@@ -619,6 +624,33 @@ for N,indx in enumerate(np.asarray([3,11,14])):
     c.set_label('($KJ/cm^2$)',rotation=90, labelpad=15, fontsize=14)
     plt.title('Ocean Heat Content ' + str(time_hwrf[0])[0:13] + '\n HWRF2019-POM (IC Clim.)',fontsize=15)
     '''
+    
+    kw = dict(levels=np.arange(0,101,10))
+    fig,ax = plt.subplots()
+    plt.contourf(lon_pom_oper[0,oklon_pom],lat_pom_oper[oklat_pom,0],OHC,cmap='magma',\
+                 **kw,vmin=0,vmax=100)
+    c=plt.colorbar()
+    plt.contour(lon_pom_oper[0,oklon_pom],lat_pom_oper[oklat_pom,0],OHC,\
+                colors='k',linestyle='-',**kw,alpha=0.3)    
+    c.set_label('$KJ/cm^2$',rotation=90, labelpad=15, fontsize=14)    
+    plt.plot(eye_lon[0],eye_lat[0],'ok',markersize=7,markeredgecolor='lawngreen') 
+    plt.plot(lon_forec_track_pom_oper,lat_forec_track_pom_oper,'.-k') 
+    plt.plot(lat_lon_matrix[0][okR1],lat_lon_matrix[1][okR1],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR2],lat_lon_matrix[1][okR2],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR3],lat_lon_matrix[1][okR3],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR4],lat_lon_matrix[1][okR4],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR5],lat_lon_matrix[1][okR5],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR6],lat_lon_matrix[1][okR6],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR7],lat_lon_matrix[1][okR7],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR8],lat_lon_matrix[1][okR8],'.k',markersize=1)
+    plt.plot(lon_maxwind,lat_maxwind,'*k',markersize=10,markeredgecolor='lawngreen') 
+    plt.xlim(np.min(lat_lon_matrix[0][okR_8])-0.1,np.max(lat_lon_matrix[0][okR_8])+0.1) 
+    plt.ylim(np.min(lat_lon_matrix[1][okR_8])-0.1,np.max(lat_lon_matrix[1][okR_8])+0.1)  
+    c.set_label('($KJ/cm^2$)',rotation=90, labelpad=15, fontsize=14)
+    plt.title('Ocean Heat Content ' + str(time_hwrf[0])[0:13] + '\n HWRF2019-POM (IC Clim.)',fontsize=15)
+    file_name = folder_fig + 'HWRF2019_POM_Dorian_OHC_cycle_' + cycle + '_' + str(tpom[0])[0:13] 
+    plt.savefig(file_name,bbox_inches = 'tight',pad_inches = 0.1)
+    
     for n in np.arange(1,len(RR_norm_bins)):
         print(n)
         okR = np.logical_and(RR_pom_norm >= RR_norm_bins[n-1],RR_pom_norm <= RR_norm_bins[n])
@@ -783,6 +815,32 @@ for N,indx in enumerate(np.asarray([3,11,14])):
     Tmean_dens_crit_vec = np.ravel(Tmean_dens_crit)[okR_pom_8]
     
     okRR_pom = np.argsort(RR_pom_norm)
+    
+    kw = dict(levels=np.arange(27,29.6,0.2))
+    fig,ax = plt.subplots()
+    plt.contourf(lon_pom_exp[0,oklon_pom],lat_pom_exp[oklat_pom,0],Tmean_dens_crit,cmap=cmocean.cm.thermal,\
+                 **kw,vmin=27,vmax=29.5)
+    c=plt.colorbar()
+    plt.contour(lon_pom_exp[0,oklon_pom],lat_pom_exp[oklat_pom,0],Tmean_dens_crit,\
+                colors='k',linestyle='-',**kw,alpha=0.3)  
+    plt.plot(eye_lon[0],eye_lat[0],'ok',markersize=7,markeredgecolor='lawngreen') 
+    plt.plot(lon_forec_track_pom_exp,lat_forec_track_pom_exp,'.-k') 
+    plt.plot(lat_lon_matrix[0][okR1],lat_lon_matrix[1][okR1],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR2],lat_lon_matrix[1][okR2],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR3],lat_lon_matrix[1][okR3],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR4],lat_lon_matrix[1][okR4],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR5],lat_lon_matrix[1][okR5],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR6],lat_lon_matrix[1][okR6],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR7],lat_lon_matrix[1][okR7],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR8],lat_lon_matrix[1][okR8],'.k',markersize=1)
+    plt.plot(lon_maxwind,lat_maxwind,'*k',markersize=10,markeredgecolor='lawngreen') 
+    plt.xlim(np.min(lat_lon_matrix[0][okR_8])-0.1,np.max(lat_lon_matrix[0][okR_8])+0.1) 
+    plt.ylim(np.min(lat_lon_matrix[1][okR_8])-0.1,np.max(lat_lon_matrix[1][okR_8])+0.1)  
+    c.set_label('$^oC$',rotation=90, labelpad=15, fontsize=14)
+    plt.title('Mixed Layer Temperature ' + str(time_hwrf[0])[0:13] + '\n HWRF2020-POM (IC RTOFS)',fontsize=15)
+    file_name = folder_fig + 'HWRF2020_POM_Dorian_Temp_MLD_cycle_' + cycle + '_' + str(tpom[0])[0:13] 
+    plt.savefig(file_name,bbox_inches = 'tight',pad_inches = 0.1)  
+           
     '''
     c = Tmean_dens_crit_vec
     fig,ax = plt.subplots()
@@ -811,6 +869,33 @@ for N,indx in enumerate(np.asarray([3,11,14])):
     OHC_vec = np.ravel(OHC)[okR_pom_8]
      
     okRR_pom = np.argsort(RR_pom_norm)
+    
+    kw = dict(levels=np.arange(0,101,10))
+    fig,ax = plt.subplots()
+    plt.contourf(lon_pom_exp[0,oklon_pom],lat_pom_exp[oklat_pom,0],OHC,cmap='magma',\
+                 **kw,vmin=0,vmax=100)
+    c=plt.colorbar()
+    plt.contour(lon_pom_exp[0,oklon_pom],lat_pom_exp[oklat_pom,0],OHC,\
+                colors='k',linestyle='-',**kw,alpha=0.3)    
+    c.set_label('$KJ/cm^2$',rotation=90, labelpad=15, fontsize=14)    
+    plt.plot(eye_lon[0],eye_lat[0],'ok',markersize=7,markeredgecolor='lawngreen') 
+    plt.plot(lon_forec_track_pom_exp,lat_forec_track_pom_exp,'.-k') 
+    plt.plot(lat_lon_matrix[0][okR1],lat_lon_matrix[1][okR1],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR2],lat_lon_matrix[1][okR2],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR3],lat_lon_matrix[1][okR3],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR4],lat_lon_matrix[1][okR4],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR5],lat_lon_matrix[1][okR5],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR6],lat_lon_matrix[1][okR6],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR7],lat_lon_matrix[1][okR7],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR8],lat_lon_matrix[1][okR8],'.k',markersize=1)
+    plt.plot(lon_maxwind,lat_maxwind,'*k',markersize=10,markeredgecolor='lawngreen') 
+    plt.xlim(np.min(lat_lon_matrix[0][okR_8])-0.1,np.max(lat_lon_matrix[0][okR_8])+0.1) 
+    plt.ylim(np.min(lat_lon_matrix[1][okR_8])-0.1,np.max(lat_lon_matrix[1][okR_8])+0.1)  
+    c.set_label('($KJ/cm^2$)',rotation=90, labelpad=15, fontsize=14)
+    plt.title('Ocean Heat Content ' + str(time_hwrf[0])[0:13] + '\n HWRF2020-POM (IC RTOFS)',fontsize=15)
+    file_name = folder_fig + 'HWRF2020_POM_Dorian_OHC_cycle_' + cycle + '_' + str(tpom[0])[0:13] 
+    plt.savefig(file_name,bbox_inches = 'tight',pad_inches = 0.1)    
+    
     '''
     c = OHC_vec
     fig,ax = plt.subplots()
@@ -1008,6 +1093,33 @@ for N,indx in enumerate(np.asarray([3,11,14])):
     Tmean_dens_crit_vec = np.ravel(Tmean_dens_crit)[okR_hycom_8]
     
     okRR_hycom = np.argsort(RR_hycom_norm)
+    
+    Tmean_dens_crit[Tmean_dens_crit<27] = 27
+    kw = dict(levels=np.arange(27,29.6,0.2))
+    fig,ax = plt.subplots()
+    plt.contourf(lon_hycom[0,oklon_hycom]-360,lat_hycom[oklat_hycom,0],Tmean_dens_crit,cmap=cmocean.cm.thermal,\
+                 **kw,vmin=27,vmax=29.5)
+    c=plt.colorbar()
+    plt.contour(lon_hycom[0,oklon_hycom]-360,lat_hycom[oklat_hycom,0],Tmean_dens_crit,\
+                colors='k',linestyle='-',**kw,alpha=0.3)  
+    plt.plot(eye_lon[0],eye_lat[0],'ok',markersize=7,markeredgecolor='lawngreen') 
+    plt.plot(lon_forec_track_hycom_exp,lat_forec_track_hycom_exp,'.-k') 
+    plt.plot(lat_lon_matrix[0][okR1],lat_lon_matrix[1][okR1],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR2],lat_lon_matrix[1][okR2],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR3],lat_lon_matrix[1][okR3],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR4],lat_lon_matrix[1][okR4],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR5],lat_lon_matrix[1][okR5],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR6],lat_lon_matrix[1][okR6],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR7],lat_lon_matrix[1][okR7],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR8],lat_lon_matrix[1][okR8],'.k',markersize=1)
+    plt.plot(lon_maxwind,lat_maxwind,'*k',markersize=10,markeredgecolor='lawngreen') 
+    plt.xlim(np.min(lat_lon_matrix[0][okR_8])-0.1,np.max(lat_lon_matrix[0][okR_8])+0.1) 
+    plt.ylim(np.min(lat_lon_matrix[1][okR_8])-0.1,np.max(lat_lon_matrix[1][okR_8])+0.1)  
+    c.set_label('$^oC$',rotation=90, labelpad=15, fontsize=14)
+    plt.title('Mixed Layer Temperature ' + str(time_hwrf[0])[0:13] + '\n HWRF2020-HYCOM (IC RTOFS)',fontsize=15)
+    file_name = folder_fig + 'HWRF2020_HYCOM_Dorian_Temp_MLD_cycle_' + cycle + '_' + str(time_hwrf[0])[0:13] 
+    plt.savefig(file_name,bbox_inches = 'tight',pad_inches = 0.1)      
+    
     '''
     c = Tmean_dens_crit_vec
     fig,ax = plt.subplots()
@@ -1037,6 +1149,33 @@ for N,indx in enumerate(np.asarray([3,11,14])):
     OHC_vec = np.ravel(OHC)[okR_hycom_8]
      
     okRR_hycom = np.argsort(RR_hycom_norm)
+    
+    kw = dict(levels=np.arange(0,101,10))
+    fig,ax = plt.subplots()
+    plt.contourf(lon_hycom[0,oklon_hycom]-360,lat_hycom[oklat_hycom,0],OHC,cmap='magma',\
+                 **kw,vmin=0,vmax=100)
+    c=plt.colorbar()
+    plt.contour(lon_hycom[0,oklon_hycom]-360,lat_hycom[oklat_hycom,0],OHC,\
+                colors='k',linestyle='-',**kw,alpha=0.3)    
+    c.set_label('$KJ/cm^2$',rotation=90, labelpad=15, fontsize=14)    
+    plt.plot(eye_lon[0],eye_lat[0],'ok',markersize=7,markeredgecolor='lawngreen') 
+    plt.plot(lon_forec_track_hycom_exp,lat_forec_track_hycom_exp,'.-k') 
+    plt.plot(lat_lon_matrix[0][okR1],lat_lon_matrix[1][okR1],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR2],lat_lon_matrix[1][okR2],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR3],lat_lon_matrix[1][okR3],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR4],lat_lon_matrix[1][okR4],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR5],lat_lon_matrix[1][okR5],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR6],lat_lon_matrix[1][okR6],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR7],lat_lon_matrix[1][okR7],'.k',markersize=1)
+    plt.plot(lat_lon_matrix[0][okR8],lat_lon_matrix[1][okR8],'.k',markersize=1)
+    plt.plot(lon_maxwind,lat_maxwind,'*k',markersize=10,markeredgecolor='lawngreen') 
+    plt.xlim(np.min(lat_lon_matrix[0][okR_8])-0.1,np.max(lat_lon_matrix[0][okR_8])+0.1) 
+    plt.ylim(np.min(lat_lon_matrix[1][okR_8])-0.1,np.max(lat_lon_matrix[1][okR_8])+0.1)  
+    c.set_label('($KJ/cm^2$)',rotation=90, labelpad=15, fontsize=14)
+    plt.title('Ocean Heat Content ' + str(time_hwrf[0])[0:13] + '\n HWRF2020-HYCOM (IC RTOFS)',fontsize=15)
+    file_name = folder_fig + 'HWRF2020_HYCOM_Dorian_OHC_cycle_' + cycle + '_' + str(time_hwrf[0])[0:13] 
+    plt.savefig(file_name,bbox_inches = 'tight',pad_inches = 0.1)     
+    
     '''
     c = OHC_vec
     fig,ax = plt.subplots()
@@ -1103,17 +1242,19 @@ for N in np.arange(3):
     #plt.plot(RR_norm_bins_mid,Tmean_min_pom_exp[N,1:],'-',color='teal',alpha=0.5)
     ax.fill_between(RR_norm_bins_mid,Tmean_min_pom_exp[N,1:],Tmean_max_pom_exp[N,1:],color='teal',alpha=0.1)
     
-    plt.plot(RR_norm_bins_mid,Tmean_mean_hycom_exp[N,1:],'^-',color='darkorange',label='HWRF2020-HYCOM (RTOFS)',markeredgecolor='k',markersize=7)
+    plt.plot(RR_norm_bins_mid,Tmean_mean_hycom_exp[N,1:],'H-',color='darkorange',label='HWRF2020-HYCOM (RTOFS)',markeredgecolor='k',markersize=7)
     #plt.plot(RR_norm_bins_mid,Tmean_max_hycom_exp[N,1:],'-',color='darkorange',alpha=0.5)
     #plt.plot(RR_norm_bins_mid,Tmean_min_hycom_exp[N,1:],'-',color='darkorange',alpha=0.5)
     ax.fill_between(RR_norm_bins_mid,Tmean_min_hycom_exp[N,1:],Tmean_max_hycom_exp[N,1:],color='darkorange',alpha=0.1)
     
     plt.title('Mixed Layer Temperature ' + str(time[N])[2:15],fontsize=16)
-    plt.ylim(27.5,29.5)
+    plt.ylim(27.0,29.5)
     plt.ylabel('$^oC$',fontsize=14)
     plt.xlabel('r/Rmax',fontsize=14)
     plt.xticks(np.arange(9))
     plt.legend(loc='lower left')
+    file_name = folder_fig + 'Dorian_Temp_MLD_vs_Rnorm_cycle_' + cycle + '_' + str(time[N])[0:13] 
+    plt.savefig(file_name,bbox_inches = 'tight',pad_inches = 0.1)    
  
 #%%
 for N in np.arange(3):
@@ -1128,7 +1269,7 @@ for N in np.arange(3):
     #plt.plot(RR_norm_bins_mid,OHC_min_pom_exp[N,1:],'-',color='teal',alpha=0.5)
     ax.fill_between(RR_norm_bins_mid,OHC_min_pom_exp[N,1:],OHC_max_pom_exp[N,1:],color='teal',alpha=0.1)
     
-    plt.plot(RR_norm_bins_mid,OHC_mean_hycom_exp[N,1:],'^-',color='darkorange',label='HWRF2020-HYCOM (RTOFS)',markeredgecolor='k',markersize=7)
+    plt.plot(RR_norm_bins_mid,OHC_mean_hycom_exp[N,1:],'H-',color='darkorange',label='HWRF2020-HYCOM (RTOFS)',markeredgecolor='k',markersize=7)
     #plt.plot(RR_norm_bins_mid,OHC_max_hycom_exp[N,1:],'-',color='darkorange',alpha=0.5)
     #plt.plot(RR_norm_bins_mid,OHC_min_hycom_exp[N,1:],'-',color='darkorange',alpha=0.5)
     ax.fill_between(RR_norm_bins_mid,OHC_min_hycom_exp[N,1:],OHC_max_hycom_exp[N,1:],color='darkorange',alpha=0.1)
@@ -1139,3 +1280,5 @@ for N in np.arange(3):
     plt.xlabel('r/Rmax',fontsize=14)
     plt.xticks(np.arange(9))
     plt.legend(loc='lower left')
+    file_name = folder_fig + 'Dorian_OHC_vs_Rnorm_cycle_' + cycle + '_' + str(time[N])[0:13] 
+    plt.savefig(file_name,bbox_inches = 'tight',pad_inches = 0.1)   
