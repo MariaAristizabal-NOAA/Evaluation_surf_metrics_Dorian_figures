@@ -35,7 +35,7 @@ Nend = 22 # indicates how far in the hurricabe track you want
 bath_file = home_folder+'aristizabal/bathymetry_files/GEBCO_2014_2D_-100.0_0.0_-10.0_50.0.nc'
 
 # KMZ file
-kmz_file_Dorian = home_folder+'aristizabal/KMZ_files/al052019_best_track-5.kmz'
+kmz_file_Dorian = home_folder+'aristizabal/KMZ_files/2019/al052019_best_track.kmz'
 
 # url for GOFS 
 url_GOFS = 'http://tds.hycom.org/thredds/dodsC/GLBv0.08/expt_93.0/ts3z'
@@ -74,7 +74,7 @@ folder_hycom_exp = folder_hycom20 + 'HWRF2020_HYCOM_dorian05l.' + cycle + '_hyco
 prefix_hycom = 'dorian05l.' + cycle + '.hwrf_rtofs_hat10_3z'
 
 #Dir_HMON_HYCOM = '/Volumes/aristizabal/ncep_model/HMON-HYCOM_Michael/'
-Dir_HMON_HYCOM = home_folder + 'aristizabal/ncep_model/HWRF-Hycom-WW3_exp_Michael/'
+Dir_HMON_HYCOM = home_folder + 'aristizabal/HWRF_RTOFS_Michael_2018/HWRF-Hycom_exp_Michael/'
 # RTOFS grid file name
 hycom_grid_exp = Dir_HMON_HYCOM + 'hwrf_rtofs_hat10.basin.regional.grid'
 
@@ -101,7 +101,7 @@ import seawater as sw
 import cmocean
 
 import sys
-sys.path.append('/Users/aristizabal/Desktop/MARACOOS_project/NCEP_scripts')
+sys.path.append('/home/aristizabal/NCEP_scripts')
 from utils4HYCOM import readBinz, readgrids
 
 # Increase fontsize of labels globally
@@ -371,7 +371,8 @@ def get_profiles_from_GOFS(DF,target_time,lon_track,lat_track):
     t_G = netCDF4.num2date(tt_G[:],tt_G.units)
     oklon = np.round(np.interp(lon_track+360,DF.lon,np.arange(len(DF.lon)))).astype(int)
     oklat = np.round(np.interp(lat_track,DF.lat,np.arange(len(DF.lat)))).astype(int)
-    okt = np.where(mdates.date2num(t_G) == mdates.date2num(target_time))[0][0]
+    #okt = np.where(mdates.date2num(t_G) == mdates.date2num(target_time))[0][0]
+    okt = np.where(t_G == mdates.num2date(mdates.date2num(target_time)))[0][0]
     
     temp_along_track = np.empty((len(depth),len(oklon)))
     temp_along_track[:] = np.nan

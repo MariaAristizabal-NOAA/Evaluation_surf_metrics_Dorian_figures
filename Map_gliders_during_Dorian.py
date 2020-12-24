@@ -256,7 +256,7 @@ for i,id_all in enumerate(gliders_all):
         long = df['longitude (degrees_east)'].values[ind]
         ax1.plot(long,latg,'.-',color='darkorange',markersize=1)
 
-ax1.text(-99,47,'(a)',fontsize=16,color='white',weight='bold')   
+ax1.text(-99,51,'(a)',fontsize=16,color='k')   
 ax1.axis('scaled')
 ax1.axis([lon_lim[0],lon_lim[1],lat_lim[0],lat_lim[1]])
 
@@ -375,6 +375,7 @@ e = ERDDAP(
 #lev = np.arange(-9000,9100,100)
 #fig, ax2 = plt.subplots(figsize=(10, 5))
 #plt.contour(bath_lonsub,bath_latsub,bath_elevsub,[0],colors='k')
+
 ax2.contourf(bath_lonsub,bath_latsub,bath_elevsub,lev,cmap=cmocean.cm.topo)
 ax2.set_yticks([])
 ax2.set_xticks([])
@@ -458,8 +459,149 @@ for i in np.arange(17,24):
 ax2.axis('scaled')
 ax2.axis([lon_lim[0],lon_lim[1],lat_lim[0],lat_lim[1]])
 
-ax2.text(-70.4,23.4,'(b)',fontsize=16,color='white',weight='bold')
-plt.subplots_adjust(left=0.05,right=0.95, wspace=-0.1, top=0.9)
+ax2.text(-70.4,24.2,'(b)',fontsize=16,color='k')
+plt.subplots_adjust(left=0.05,right=0.95, wspace=-0.1, top=0.87)
 file = folder_fig + 'Daily_map_North_Atlantic_gliders_in_DAC_detail' + '.png' #+ min_time[0:10] + '_' + max_time[0:10] + '.png'
 #file = 'Daily_map_North_Atlantic_gliders_in_DAC_detail_' + str(tmin)[0:10] + '_' + str(tmax)[0:10] 
 plt.savefig(file,bbox_inches = 'tight',pad_inches = 0.1)  
+
+#%% Map of North Atlantic with glider tracks
+
+lat_lim = [10,50]
+lon_lim = [-83,-50]  
+
+# Reading bathymetry data
+
+ncbath = Dataset(bath_file)
+bath_lat = ncbath.variables['lat'][:]
+bath_lon = ncbath.variables['lon'][:]
+bath_elev = ncbath.variables['elevation'][:]
+
+oklatbath = np.logical_and(bath_lat >= lat_lim[0],bath_lat <= lat_lim[-1])
+oklonbath = np.logical_and(bath_lon >= lon_lim[0],bath_lon <= lon_lim[-1])
+
+bath_latsub = bath_lat[oklatbath]
+bath_lonsub = bath_lon[oklonbath]
+bath_elevs = bath_elev[oklatbath,:]
+bath_elevsub = bath_elevs[:,oklonbath]
+
+print('Looking for glider data sets')
+e = ERDDAP(server = server)
+
+# Grab every dataset available
+datasets = pd.read_csv(e.get_search_url(response='csv', search_for='all'))
+
+# Search constraints
+kw = {
+    'min_lon': lon_lim[0],
+    'max_lon': lon_lim[1],
+    'min_lat': lat_lim[0],
+    'max_lat': lat_lim[1],
+    'min_time': min_time,
+    'max_time': max_time,
+}
+
+search_url = e.get_search_url(response='csv', **kw)
+
+# Grab the results
+search = pd.read_csv(search_url)
+
+# Extract the IDs
+gliders = search['Dataset ID'].values
+
+msg = 'Found {} Glider Datasets:\n\n{}'.format
+print(msg(len(gliders), '\n'.join(gliders)))
+
+#% get entire deployment (lat and lon) during hurricane season
+
+# Time bounds
+min_time2 = '2019/06/01/00'
+max_time2 = '2019/11/30/00'
+
+# Search constraints
+kw = {
+    'min_lon': lon_lim[0],
+    'max_lon': lon_lim[1],
+    'min_lat': lat_lim[0],
+    'max_lat': lat_lim[1],
+    'min_time': min_time2,
+    'max_time': max_time2,
+}
+
+search_url = e.get_search_url(response='csv', **kw)
+
+# Grab the results
+search = pd.read_csv(search_url)
+
+# Extract the IDs
+gliders_all = search['Dataset ID'].values
+
+msg = 'Found {} Glider Datasets:\n\n{}'.format
+print(msg(len(gliders_all), '\n'.join(gliders_all)))
+
+# Setting constraints
+constraints = {
+        'time>=': min_time2,
+        'time<=': max_time2,
+        'latitude>=': lat_lim[0],
+        'latitude<=': lat_lim[1],
+        'longitude>=': lon_lim[0],
+        'longitude<=': lon_lim[1],
+        }
+
+variables = [
+        'depth',
+        'latitude',
+        'longitude',
+        'time'
+        ]
+
+e = ERDDAP(
+        server=server,
+        protocol='tabledap',
+        response='nc'
+        )
+
+lev = np.arange(-9000,9100,100)
+fig, ax1 = plt.subplots(figsize=(10, 5))
+
+ax1.contourf(bath_lonsub,bath_latsub,bath_elevsub,lev,cmap=cmocean.cm.topo)
+ax1.set_xticks([])
+ax1.set_yticks([])
+ax1.plot(lon_best_track[5:-2],lat_best_track[5:-2],'o',color='firebrick',markersize=3,\
+         markeredgecolor='k')
+#ax1.set_aspect(1)
+ax1.axis('scaled')
+rect = patches.Rectangle((lon_lim2[0],lat_lim2[0]),\
+                             lon_lim2[1]-lon_lim2[0],lat_lim2[1]-lat_lim2[0],\
+                             linewidth=2,edgecolor='k',facecolor='none')
+ax1.add_patch(rect)
+
+for i,id_all in enumerate(gliders_all):
+    id = [id for id in gliders if id == id_all]
+    if len(id) != 0:
+        print(id[0])     
+        e.dataset_id = id[0]
+        e.constraints = constraints
+        e.variables = variables
+
+        df = e.to_pandas(
+                index_col='time (UTC)',
+                parse_dates=True,
+                skiprows=(1,)  # units information can be dropped.
+                ).dropna()
+        
+        print(len(df))
+               
+        timeg, ind = np.unique(df.index.values,return_index=True)
+        latg = df['latitude (degrees_north)'].values[ind]
+        long = df['longitude (degrees_east)'].values[ind]
+        ax1.plot(long,latg,'.-',color='darkorange',markersize=1)
+   
+ax1.axis('scaled')
+ax1.axis([lon_lim[0],lon_lim[1],lat_lim[0],lat_lim[1]])
+
+folder = '/Users/aristizabal/Desktop/MARACOOS_project/Maria_scripts/Figures/Model_glider_comp/'
+file = folder + 'Daily_map_North_Atlantic_gliders_in_DAC_Hurr_Dorian'
+plt.savefig(file,bbox_inches = 'tight',pad_inches = 0.1)
+

@@ -37,8 +37,14 @@ import os
 from datetime import datetime,timedelta
 import matplotlib.dates as mdates
 import glob
+from matplotlib.ticker import (MultipleLocator, FormatStrFormatter)
 
-plt.switch_backend('agg')
+# Increase fontsize of labels globally
+plt.rc('xtick',labelsize=14)
+plt.rc('ytick',labelsize=14)
+plt.rc('legend',fontsize=14)
+
+#plt.switch_backend('agg')
 
 #%% Hurricane Dorian best track information
 t0 = datetime(2019,8,24,12)
@@ -191,6 +197,7 @@ for c,cycle in enumerate(cycles):
     Int_err_model2_noRI[c,okn2] = int_err_model2[no_RI2]
     Int_err_model3_noRI[c,okn3] = int_err_model3[no_RI3]
 
+    '''
     #%% Intensity error
     from matplotlib.ticker import (MultipleLocator, FormatStrFormatter)
 
@@ -211,6 +218,7 @@ for c,cycle in enumerate(cycles):
     plt.legend(loc='upper left',fontsize=14)
     file_name = figs_dir + 'Dorian_intensity_error_cycle_'+cycle
     plt.savefig(file_name,bbox_inches = 'tight',pad_inches = 0.1)
+    '''
 
 #%%
 Int_err_model1_noRI_mean = np.nanmean(Int_err_model1_noRI,0)
@@ -326,7 +334,7 @@ for t in range(Int_err_model1_noRI.shape[1]):
     RMSE_model1_noRI[t] = np.nansum((Int_err_model1_noRI[:,t])**2)
     RMSE_model2_noRI[t] = np.nansum((Int_err_model2_noRI[:,t])**2)
     RMSE_model3_noRI[t] = np.nansum((Int_err_model3_noRI[:,t])**2)
-    
+
 RMSE_model1_noRI = np.sqrt(RMSE_model1_noRI/Int_err_model1_noRI.shape[1])
 RMSE_model2_noRI = np.sqrt(RMSE_model2_noRI/Int_err_model2_noRI.shape[1])
 RMSE_model3_noRI = np.sqrt(RMSE_model3_noRI/Int_err_model3_noRI.shape[1])
@@ -349,4 +357,67 @@ plt.ylabel('Forocasted RMES (Kt)',fontsize=16)
 plt.xlabel('Forecast Lead Time (Hr)',fontsize=16)
 plt.legend(loc='upper left',fontsize=13)
 file_name = figs_dir + 'Dorian_RMSE_intensity_forecast_'+cycles[0] + '_'+cycles[-1]
+plt.savefig(file_name,bbox_inches = 'tight',pad_inches = 0.1)
+
+
+#%% Two panels together
+
+fig, ax = plt.subplots(figsize=(8, 10))
+grid = plt.GridSpec(2, 1, wspace=0.3, hspace=0.2,left=0.05,right=0.95)
+#plt.suptitle('Hurricane Dorian Forecast cycles 2019082800-1029090100',fontsize=18)
+
+ax1 = plt.subplot(grid[0, 0])
+plt.plot(lead_time,Int_err_model1_noRI_mean,'X-',color='mediumorchid',label=model1+' (IC clim.)',markeredgecolor='k',markersize=7)
+ax1.fill_between(lead_time,Int_err_model1_noRI_min,Int_err_model1_noRI_max,color='mediumorchid',alpha=0.1)
+plt.plot(lead_time,Int_err_model1_noRI_min,'-',color='mediumorchid',alpha=0.5)
+plt.plot(lead_time,Int_err_model1_noRI_max,'-',color='mediumorchid',alpha=0.5)
+
+plt.plot(lead_time,Int_err_model2_noRI_mean,'^-',color='teal',label=model2+' (IC RTOFS)',markeredgecolor='k',markersize=7)
+ax1.fill_between(lead_time,Int_err_model2_noRI_min,Int_err_model2_noRI_max,color='teal',alpha=0.1)
+plt.plot(lead_time,Int_err_model2_noRI_min,'-',color='teal',alpha=0.5)
+plt.plot(lead_time,Int_err_model2_noRI_max,'-',color='teal',alpha=0.5)
+
+plt.plot(lead_time,Int_err_model3_noRI_mean,'H-',color='darkorange',label=model3+' (IC RTOFS)',markeredgecolor='k',markersize=7)
+ax1.fill_between(lead_time,Int_err_model3_noRI_min,Int_err_model3_noRI_max,color='darkorange',alpha=0.1)
+plt.plot(lead_time,Int_err_model3_noRI_min,'-',color='darkorange',alpha=0.5)
+plt.plot(lead_time,Int_err_model3_noRI_max,'-',color='darkorange',alpha=0.5)
+
+#plt.plot(np.tile(lead_time_RI,len(np.arange(50))),np.arange(50),'--k')
+plt.plot(lead_time,np.tile(0,len(lead_time)),'--k')
+plt.xlim([0,84])
+ax1.xaxis.set_major_locator(MultipleLocator(12))
+ax1.xaxis.set_major_formatter(FormatStrFormatter('%d'))
+ax1.xaxis.set_minor_locator(MultipleLocator(3))
+plt.title('Hurricane Dorian Forecast cycles 2019082800-1029090100 \n Intensity Forecast Mean Error Dorian (no RI)',fontsize=18)
+plt.ylabel('Forecast Error (Kt)',fontsize=16)
+#plt.xlabel('Forecast Lead Time (Hr)',fontsize=16)
+plt.legend(loc='upper left',fontsize=12)
+ax1.xaxis.set_major_locator(MultipleLocator(12))
+ax1.xaxis.set_major_formatter(FormatStrFormatter('%d'))
+ax1.xaxis.set_minor_locator(MultipleLocator(3))
+#ax1.xaxis.set_ticks(np.arange(0,84,12))
+#ax1.xaxis.set_ticklabels(['28-Aug \n 0','\n 12','29-Aug \n 24','\n 36','30-Aug \n 48',\
+#                          '\n 60','31-Aug \n 72','\n 84','01-Sep \n 96','\n 108','02-Sep \n 120'])
+ax1.xaxis.set_ticklabels([])
+plt.text(0,60,'(a)',fontsize=16)
+
+ax2 = plt.subplot(grid[1, 0])
+plt.plot(lead_time[0:15],RMSE_model1_noRI[0:15],'X-',color='mediumorchid',label=model1+' (IC clim.)',markeredgecolor='k',markersize=7)
+plt.plot(lead_time[0:15],RMSE_model2_noRI[0:15],'^-',color='teal',label=model2+' (IC RTOFS)',markeredgecolor='k',markersize=7)
+plt.plot(lead_time[0:15],RMSE_model3_noRI[0:15],'H-',color='darkorange',label=model3+' (IC RTOFS)',markeredgecolor='k',markersize=7)
+plt.ylim([0,20])
+plt.xlim([0,84])
+ax2.xaxis.set_major_locator(MultipleLocator(12))
+ax2.xaxis.set_major_formatter(FormatStrFormatter('%d'))
+ax2.xaxis.set_minor_locator(MultipleLocator(3))
+ax2.xaxis.set_ticks(np.arange(0,86,12))
+ax2.xaxis.set_ticklabels(['28-Aug \n 0','\n 12','29-Aug \n 24','\n 36','30-Aug \n 48',\
+                          '\n 60','31-Aug \n 72','\n 84']) #,'01-Sep' \n 96','\n 108','02-Sep \n 120'])
+plt.title('Intensity Forecast RMSE Dorian (no RI)',fontsize=18)
+plt.ylabel('Forocasted RMSE (Kt)',fontsize=16)
+plt.xlabel('Forecast Lead Time (Hr)',fontsize=16)
+#plt.legend(loc='upper left',fontsize=13)
+plt.text(0,20.5,'(b)',fontsize=16)
+
+file_name = figs_dir + 'Dorian_RMSE_mean_intensity_forecast_'+cycles[0] + '_'+cycles[-1]
 plt.savefig(file_name,bbox_inches = 'tight',pad_inches = 0.1)

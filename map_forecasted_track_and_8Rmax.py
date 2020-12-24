@@ -43,7 +43,7 @@ url_GOFS = 'http://tds.hycom.org/thredds/dodsC/GLBv0.08/expt_93.0/ts3z'
 
 # figures
 #folder_fig = '/Users/aristizabal/Desktop/MARACOOS_project/Maria_scripts/Figures/Model_glider_comp2/'
-folder_fig = dir_home + '/aristizabal/Figures/'
+folder_fig = '/www/web/rucool/aristizabal/Figures/'
 
 # folder nc files POM
 folder_pom19 =  dir_home + '/aristizabal/HWRF2019_POM_Dorian/'
@@ -165,21 +165,8 @@ HWRF_HYCOM_exp = sorted(glob.glob(os.path.join(folder_hwrf_hycom20_exp,'*.nc')))
 
 #%% Get Rmax and R values POM operational
 
-lev = np.arange(-9000,9100,100)
-
-fig,ax = plt.subplots()
-plt.contourf(bath_lonsub,bath_latsub,bath_elevsub,lev,cmap=cmocean.cm.topo)
-plt.contourf(bath_lon,bath_lat,bath_elev,[0,10000],colors='seashell')
-plt.contour(bath_lon,bath_lat,bath_elev,[0],colors='k')
-plt.plot(lon_forec_track_pom_oper, lat_forec_track_pom_oper,'X-',color='mediumorchid',\
-         markeredgecolor='k',label='HWRF2019-POM Oper (IC Clim.)',markersize=7)
-plt.axis('scaled')
-plt.xlim([np.min(lon_forec_track_pom_oper)-2,np.max(lon_forec_track_pom_oper)+2])
-plt.ylim([np.min(lat_forec_track_pom_oper)-2,np.max(lat_forec_track_pom_oper)+2])
-plt.title('Forecastes Track and 8Rmax \n Dorian cycle='+ cycle,fontsize=18)
-plt.legend()
-
-for indx in np.arange(len(HWRF_POM_oper)):    
+Rmax_POM_oper = []
+for indx in np.arange(len(HWRF_POM_oper)):
     print(HWRF_POM_oper[indx])
     HWRF = xr.open_dataset(HWRF_POM_oper[indx])
     lat_hwrf = np.asarray(HWRF.variables['latitude'][:])
@@ -187,36 +174,31 @@ for indx in np.arange(len(HWRF_POM_oper)):
     time_hwrf = np.asarray(HWRF.variables['time'][:])
     UGRD_hwrf = np.asarray(HWRF.variables['UGRD_10maboveground'][0,:,:])
     VGRD_hwrf = np.asarray(HWRF.variables['VGRD_10maboveground'][0,:,:])
-    
+
     wind_int = np.sqrt(UGRD_hwrf**2 + VGRD_hwrf**2)
     max_wind= np.max(wind_int)
     okwind = np.where(wind_int == max_wind)
     lat_maxwind = lat_hwrf[okwind[0][0]]
     lon_maxwind = lon_hwrf[okwind[1][0]]
-    Rmax = seawater.dist([lat_forec_track_pom_oper[indx],lat_maxwind],\
-                         [lon_forec_track_pom_oper[indx],lon_maxwind],'km')[0][0]
-        
-    xlim = [lon_forec_track_pom_oper[indx]-4,lon_forec_track_pom_oper[indx]+4]
-    ylim = [lat_forec_track_pom_oper[indx]-4,lat_forec_track_pom_oper[indx]+4]
-    
-    oklon = np.where(np.logical_and(lon_hwrf>xlim[0],lon_hwrf<xlim[1]))[0]
-    oklat = np.where(np.logical_and(lat_hwrf>ylim[0],lat_hwrf<ylim[1]))[0]
-    
-    meshlon_lat = np.meshgrid(lon_hwrf[oklon],lat_hwrf[oklat])
-    
-    lat_lon_matrix = np.stack((np.ravel(meshlon_lat[0]),np.ravel(meshlon_lat[1])),axis=1).T
-        
-    R = np.empty(lat_lon_matrix.shape[1])
-    R[:] = np.nan
-    for i in np.arange(lat_lon_matrix.shape[1]):
-        R[i] = seawater.dist([lat_forec_track_pom_oper[indx],lat_lon_matrix[1,i]],\
-                             [lon_forec_track_pom_oper[indx],lat_lon_matrix[0,i]],'km')[0][0] 
-    
-    R_norm = R/Rmax
-    okR8 = np.logical_and(R_norm <= 8.05,R_norm >= 7.95)
+    Rmax_POM_oper.append(seawater.dist([lat_forec_track_pom_oper[indx],lat_maxwind],\
+                         [lon_forec_track_pom_oper[indx],lon_maxwind],'km')[0][0])
 
-    plt.plot(lat_lon_matrix[0][okR8],lat_lon_matrix[1][okR8],'.k',markersize=1)    
+lev = np.arange(-9000,9100,100)
 
+fig,ax = plt.subplots()
+plt.contourf(bath_lonsub,bath_latsub,bath_elevsub,lev,cmap=cmocean.cm.topo)
+plt.plot(lon_forec_track_pom_oper, lat_forec_track_pom_oper,'X-',color='mediumorchid',\
+         markeredgecolor='k',label='HWRF2019-POM Oper (IC Clim.)',markersize=7)
+plt.axis('scaled')
+plt.xlim([np.min(lon_forec_track_pom_oper)-2,np.max(lon_forec_track_pom_oper)+2])
+plt.ylim([np.min(lat_forec_track_pom_oper)-2,np.max(lat_forec_track_pom_oper)+2])
+plt.title('Forecastes Track and 8Rmax \n Dorian cycle='+ cycle,fontsize=18)
+plt.legend()
+for x,R in enumerate(Rmax_POM_oper):
+    print(x)
+    circle = plt.Circle((lon_forec_track_pom_oper[x],lat_forec_track_pom_oper[x]),8*R/110,\
+             color='k',fill=False)
+    ax.add_artist(circle)
 plt.plot(lon_forec_track_pom_oper, lat_forec_track_pom_oper,'X-',color='mediumorchid',\
          markeredgecolor='k',markersize=7)
 file = folder_fig + 'best_track_and_8Rmax_HWRF2019_POM_oper_' + cycle
@@ -224,20 +206,7 @@ plt.savefig(file,bbox_inches = 'tight',pad_inches = 0.1)
 
 #%% Get Rmax and R values POM experimental
 
-lev = np.arange(-9000,9100,100)
-
-fig,ax = plt.subplots()
-plt.contourf(bath_lonsub,bath_latsub,bath_elevsub,lev,cmap=cmocean.cm.topo)
-plt.contourf(bath_lon,bath_lat,bath_elev,[0,10000],colors='seashell')
-plt.contour(bath_lon,bath_lat,bath_elev,[0],colors='k')
-plt.plot(lon_forec_track_pom_exp, lat_forec_track_pom_exp,'^-',color='teal',\
-         markeredgecolor='k',label='HWRF2020-POM Exp (IC RTOFS)',markersize=7)
-plt.axis('scaled')
-plt.xlim([np.min(lon_forec_track_pom_oper)-2,np.max(lon_forec_track_pom_oper)+2])
-plt.ylim([np.min(lat_forec_track_pom_oper)-2,np.max(lat_forec_track_pom_oper)+2])
-plt.title('Forecastes Track and 8Rmax \n Dorian cycle='+ cycle,fontsize=18)
-plt.legend()
-
+Rmax_POM_exp = []
 for indx in np.arange(len(HWRF_POM_exp)):
     print(HWRF_POM_exp[indx])
     HWRF = xr.open_dataset(HWRF_POM_exp[indx])
@@ -246,36 +215,31 @@ for indx in np.arange(len(HWRF_POM_exp)):
     time_hwrf = np.asarray(HWRF.variables['time'][:])
     UGRD_hwrf = np.asarray(HWRF.variables['UGRD_10maboveground'][0,:,:])
     VGRD_hwrf = np.asarray(HWRF.variables['VGRD_10maboveground'][0,:,:])
-    
+
     wind_int = np.sqrt(UGRD_hwrf**2 + VGRD_hwrf**2)
     max_wind= np.max(wind_int)
     okwind = np.where(wind_int == max_wind)
     lat_maxwind = lat_hwrf[okwind[0][0]]
     lon_maxwind = lon_hwrf[okwind[1][0]]
-    Rmax = seawater.dist([lat_forec_track_pom_exp[indx],lat_maxwind],\
-                         [lon_forec_track_pom_exp[indx],lon_maxwind],'km')[0][0]
-        
-    xlim = [lon_forec_track_pom_exp[indx]-4,lon_forec_track_pom_exp[indx]+4]
-    ylim = [lat_forec_track_pom_exp[indx]-4,lat_forec_track_pom_exp[indx]+4]
-    
-    oklon = np.where(np.logical_and(lon_hwrf>xlim[0],lon_hwrf<xlim[1]))[0]
-    oklat = np.where(np.logical_and(lat_hwrf>ylim[0],lat_hwrf<ylim[1]))[0]
-    
-    meshlon_lat = np.meshgrid(lon_hwrf[oklon],lat_hwrf[oklat])
-    
-    lat_lon_matrix = np.stack((np.ravel(meshlon_lat[0]),np.ravel(meshlon_lat[1])),axis=1).T
-    
-    R = np.empty(lat_lon_matrix.shape[1])
-    R[:] = np.nan
-    for i in np.arange(lat_lon_matrix.shape[1]):
-        R[i] = seawater.dist([lat_forec_track_pom_exp[indx],lat_lon_matrix[1,i]],\
-                             [lon_forec_track_pom_exp[indx],lat_lon_matrix[0,i]],'km')[0][0] 
-    
-    R_norm = R/Rmax
-    okR8 = np.logical_and(R_norm <= 8.05,R_norm >= 7.95)
-    
-    plt.plot(lat_lon_matrix[0][okR8],lat_lon_matrix[1][okR8],'.k',markersize=1)    
+    Rmax_POM_exp.append(seawater.dist([lat_forec_track_pom_exp[indx],lat_maxwind],\
+                         [lon_forec_track_pom_exp[indx],lon_maxwind],'km')[0][0])
 
+lev = np.arange(-9000,9100,100)
+
+fig,ax = plt.subplots()
+plt.contourf(bath_lonsub,bath_latsub,bath_elevsub,lev,cmap=cmocean.cm.topo)
+plt.plot(lon_forec_track_pom_exp, lat_forec_track_pom_exp,'^-',color='teal',\
+         markeredgecolor='k',label='HWRF2020-POM Exp (IC RTOFS)',markersize=7)
+plt.axis('scaled')
+plt.xlim([np.min(lon_forec_track_pom_oper)-2,np.max(lon_forec_track_pom_oper)+2])
+plt.ylim([np.min(lat_forec_track_pom_oper)-2,np.max(lat_forec_track_pom_oper)+2])
+plt.title('Forecastes Track and 8Rmax \n Dorian cycle='+ cycle,fontsize=18)
+plt.legend()
+for x,R in enumerate(Rmax_POM_oper):
+    print(x)
+    circle = plt.Circle((lon_forec_track_pom_oper[x],lat_forec_track_pom_oper[x]),8*R/110,\
+             color='k',fill=False)
+    ax.add_artist(circle)
 plt.plot(lon_forec_track_pom_exp, lat_forec_track_pom_exp,'^-',color='teal',\
          markeredgecolor='k',markersize=7)
 file = folder_fig + 'best_track_and_8Rmax_HWRF2020_POM_exp_' + cycle
@@ -283,20 +247,7 @@ plt.savefig(file,bbox_inches = 'tight',pad_inches = 0.1)
 
 #%% Get Rmax and R values HYCOM experimental
 
-lev = np.arange(-9000,9100,100)
-
-fig,ax = plt.subplots()
-plt.contourf(bath_lonsub,bath_latsub,bath_elevsub,lev,cmap=cmocean.cm.topo)
-plt.contourf(bath_lon,bath_lat,bath_elev,[0,10000],colors='seashell')
-plt.contour(bath_lon,bath_lat,bath_elev,[0],colors='k')
-plt.plot(lon_forec_track_hycom_exp, lat_forec_track_hycom_exp,'H-',color='orange',\
-         markeredgecolor='k',label='HWRF2020-HYCOM Exp (IC RTOFS)',markersize=7)
-plt.axis('scaled')
-plt.xlim([np.min(lon_forec_track_pom_oper)-2,np.max(lon_forec_track_pom_oper)+2])
-plt.ylim([np.min(lat_forec_track_pom_oper)-2,np.max(lat_forec_track_pom_oper)+2])
-plt.title('Forecastes Track and 8Rmax \n Dorian cycle='+ cycle,fontsize=18)
-plt.legend()
-
+Rmax_HYCOM_exp = []
 for indx in np.arange(len(HWRF_POM_exp)):
     print(HWRF_HYCOM_exp[indx])
     HWRF = xr.open_dataset(HWRF_HYCOM_exp[indx])
@@ -305,37 +256,126 @@ for indx in np.arange(len(HWRF_POM_exp)):
     time_hwrf = np.asarray(HWRF.variables['time'][:])
     UGRD_hwrf = np.asarray(HWRF.variables['UGRD_10maboveground'][0,:,:])
     VGRD_hwrf = np.asarray(HWRF.variables['VGRD_10maboveground'][0,:,:])
-    
+
     wind_int = np.sqrt(UGRD_hwrf**2 + VGRD_hwrf**2)
     max_wind= np.max(wind_int)
     okwind = np.where(wind_int == max_wind)
     lat_maxwind = lat_hwrf[okwind[0][0]]
     lon_maxwind = lon_hwrf[okwind[1][0]]
-    Rmax = seawater.dist([lat_forec_track_hycom_exp[indx],lat_maxwind],\
-                         [lon_forec_track_hycom_exp[indx],lon_maxwind],'km')[0][0]
-        
-    xlim = [lon_forec_track_hycom_exp[indx]-4,lon_forec_track_hycom_exp[indx]+4]
-    ylim = [lat_forec_track_hycom_exp[indx]-4,lat_forec_track_hycom_exp[indx]+4]
-    
-    oklon = np.where(np.logical_and(lon_hwrf>xlim[0],lon_hwrf<xlim[1]))[0]
-    oklat = np.where(np.logical_and(lat_hwrf>ylim[0],lat_hwrf<ylim[1]))[0]
-    
-    meshlon_lat = np.meshgrid(lon_hwrf[oklon],lat_hwrf[oklat])
-    
-    lat_lon_matrix = np.stack((np.ravel(meshlon_lat[0]),np.ravel(meshlon_lat[1])),axis=1).T
-    
-    R = np.empty(lat_lon_matrix.shape[1])
-    R[:] = np.nan
-    for i in np.arange(lat_lon_matrix.shape[1]):
-        R[i] = seawater.dist([lat_forec_track_hycom_exp[indx],lat_lon_matrix[1,i]],\
-                             [lon_forec_track_hycom_exp[indx],lat_lon_matrix[0,i]],'km')[0][0] 
-    
-    R_norm = R/Rmax
-    okR8 = np.logical_and(R_norm <= 8.05,R_norm >= 7.95)
-    
-    plt.plot(lat_lon_matrix[0][okR8],lat_lon_matrix[1][okR8],'.k',markersize=1)    
+    Rmax_HYCOM_exp.append(seawater.dist([lat_forec_track_hycom_exp[indx],lat_maxwind],\
+                         [lon_forec_track_hycom_exp[indx],lon_maxwind],'km')[0][0])
+
+lev = np.arange(-9000,9100,100)
+
+fig,ax = plt.subplots()
+plt.contourf(bath_lonsub,bath_latsub,bath_elevsub,lev,cmap=cmocean.cm.topo)
+plt.plot(lon_forec_track_hycom_exp, lat_forec_track_hycom_exp,'H-',color='orange',\
+         markeredgecolor='k',label='HWRF2020-HYCOM Exp (IC RTOFS)',markersize=7)
+plt.axis('scaled')
+plt.xlim([np.min(lon_forec_track_pom_oper)-2,np.max(lon_forec_track_pom_oper)+2])
+plt.ylim([np.min(lat_forec_track_pom_oper)-2,np.max(lat_forec_track_pom_oper)+2])
+plt.title('Forecastes Track and 8Rmax \n Dorian cycle='+ cycle,fontsize=18)
+plt.legend()
+for x,R in enumerate(Rmax_POM_oper):
+    print(x)
+    circle = plt.Circle((lon_forec_track_pom_oper[x],lat_forec_track_pom_oper[x]),8*R/110,\
+             color='k',fill=False)
+    ax.add_artist(circle)
 
 plt.plot(lon_forec_track_hycom_exp, lat_forec_track_hycom_exp,'H-',color='orange',\
          markeredgecolor='k',markersize=7)
 file = folder_fig + 'best_track_and_8Rmax_HWRF2020_HYCOM_exp_' + cycle
+plt.savefig(file,bbox_inches = 'tight',pad_inches = 0.1)
+
+#%% Rmax vs latitude
+
+plt.figure(figsize=(10,5))
+plt.plot(lat_forec_track_pom_oper,Rmax_POM_oper,'X-',color='mediumorchid',\
+         markeredgecolor='k',markersize=7,label='HWRF2019-POM Oper (IC Clim.)')
+plt.plot(lat_forec_track_pom_exp,Rmax_POM_exp,'^-',color='teal',\
+          markeredgecolor='k',markersize=7,label='HWRF2020-POM Exp (IC RTOFS)')
+plt.plot(lat_forec_track_hycom_exp,Rmax_HYCOM_exp, 'H-',color='orange',\
+         markeredgecolor='k',markersize=7,label='HWRF2020-HYCOM Exp (IC RTOFS)')
+plt.ylabel('Rmax (km)',fontsize=14)
+plt.xlabel('Latitude ($^o$)',fontsize=14)
+
+##############################################
+#%% All figures together
+
+fig, ax = plt.subplots(figsize=(10, 8))
+grid = plt.GridSpec(2, 3, wspace=0.1, hspace=0.2,left=0.05,right=0.95)
+
+#########
+ax1 = plt.subplot(grid[0, 0])
+plt.contourf(bath_lonsub,bath_latsub,bath_elevsub,lev,cmap=cmocean.cm.topo)
+plt.plot(lon_forec_track_pom_oper, lat_forec_track_pom_oper,'X-',color='mediumorchid',\
+         markeredgecolor='k',label='HWRF2019-POM Oper (IC Clim.)',markersize=7)
+plt.axis('scaled')
+plt.xlim([np.min(lon_forec_track_pom_oper)-2,np.max(lon_forec_track_pom_oper)+2])
+plt.ylim([np.min(lat_forec_track_pom_oper)-2,np.max(lat_forec_track_pom_oper)+2])
+for x,R in enumerate(Rmax_POM_oper):
+    print(x)
+    circle = plt.Circle((lon_forec_track_pom_oper[x],lat_forec_track_pom_oper[x]),8*R/110,\
+             color='k',fill=False)
+    ax1.add_artist(circle)
+plt.plot(lon_forec_track_pom_oper, lat_forec_track_pom_oper,'X-',color='mediumorchid',\
+         markeredgecolor='k',markersize=7)
+plt.text(-63.5,30,'(a)',fontsize=16)
+
+#########
+
+ax2 = plt.subplot(grid[0, 1])
+plt.title('Hurricane Dorian Forecast Cycle '+ cycle + '\n Forecasted Track and 8Rmax',fontsize=16)
+plt.contourf(bath_lonsub,bath_latsub,bath_elevsub,lev,cmap=cmocean.cm.topo)
+plt.plot(lon_forec_track_pom_exp, lat_forec_track_pom_exp,'^-',color='teal',\
+         markeredgecolor='k',label='HWRF2020-POM Exp (IC RTOFS)',markersize=7)
+plt.axis('scaled')
+plt.xlim([np.min(lon_forec_track_pom_oper)-2,np.max(lon_forec_track_pom_oper)+2])
+plt.ylim([np.min(lat_forec_track_pom_oper)-2,np.max(lat_forec_track_pom_oper)+2])
+ax2.set_yticklabels(' ')
+for x,R in enumerate(Rmax_POM_exp):
+    print(x)
+    circle = plt.Circle((lon_forec_track_pom_exp[x],lat_forec_track_pom_exp[x]),8*R/110,\
+             color='k',fill=False)
+    ax2.add_artist(circle)
+plt.plot(lon_forec_track_pom_exp, lat_forec_track_pom_exp,'^-',color='teal',\
+         markeredgecolor='k',markersize=7)
+plt.text(-63.5,30,'(b)',fontsize=16)
+
+##########
+
+ax3 = plt.subplot(grid[0, 2])
+plt.contourf(bath_lonsub,bath_latsub,bath_elevsub,lev,cmap=cmocean.cm.topo)
+plt.plot(lon_forec_track_hycom_exp, lat_forec_track_hycom_exp,'H-',color='orange',\
+         markeredgecolor='k',label='HWRF2020-HYCOM Exp (IC RTOFS)',markersize=7)
+plt.axis('scaled')
+plt.xlim([np.min(lon_forec_track_pom_oper)-2,np.max(lon_forec_track_pom_oper)+2])
+plt.ylim([np.min(lat_forec_track_pom_oper)-2,np.max(lat_forec_track_pom_oper)+2])
+ax3.set_yticklabels(' ')
+for x,R in enumerate(Rmax_HYCOM_exp):
+    print(x)
+    circle = plt.Circle((lon_forec_track_hycom_exp[x],lat_forec_track_hycom_exp[x]),8*R/110,\
+             color='k',fill=False)
+    ax3.add_artist(circle)
+plt.plot(lon_forec_track_hycom_exp, lat_forec_track_hycom_exp,'H-',color='orange',\
+         markeredgecolor='k',markersize=7)
+plt.text(-63.5,30,'(c)',fontsize=16)
+
+############
+
+ax4 = plt.subplot(grid[1, :])
+plt.plot(lat_forec_track_pom_oper,Rmax_POM_oper,'X-',color='mediumorchid',\
+         markeredgecolor='k',markersize=7,label='HWRF2019-POM Oper (IC Clim.)')
+plt.plot(lat_forec_track_pom_exp,Rmax_POM_exp,'^-',color='teal',\
+          markeredgecolor='k',markersize=7,label='HWRF2020-POM Exp (IC RTOFS)')
+plt.plot(lat_forec_track_hycom_exp,Rmax_HYCOM_exp, 'H-',color='orange',\
+         markeredgecolor='k',markersize=7,label='HWRF2020-HYCOM Exp (IC RTOFS)')
+plt.ylabel('Rmax (km)',fontsize=14)
+plt.xlabel('Latitude ($^o$)',fontsize=14)
+plt.legend()
+plt.title('Radius of Maximum Wind',fontsize=16)
+plt.ylim([0,42])
+plt.text(15.5,38,'(d)',fontsize=16)
+
+file = folder_fig + 'best_track_and_8Rmax_All_models_Dorian_' + cycle
 plt.savefig(file,bbox_inches = 'tight',pad_inches = 0.1)

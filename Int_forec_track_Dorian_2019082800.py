@@ -36,14 +36,15 @@ bath_file = dir_home +'/aristizabal/bathymetry_files/GEBCO_2014_2D_-100.0_0.0_-1
 
 # KMZ file best track Dorian
 #kmz_file_Dorian = '/Users/aristizabal/Desktop/MARACOOS_project/Maria_scripts/KMZ_files/al052019_best_track-5.kmz'
-kmz_file_Dorian = dir_home + '/aristizabal/KMZ_files/al052019_best_track-5.kmz'
+kmz_file_Dorian = dir_home + '/aristizabal/KMZ_files/2019/al052019_best_track.kmz'
 
 # url for GOFS 3.1
 url_GOFS = 'http://tds.hycom.org/thredds/dodsC/GLBv0.08/expt_93.0/ts3z'
 
 # figures
 #folder_fig = '/Users/aristizabal/Desktop/MARACOOS_project/Maria_scripts/Figures/Model_glider_comp2/'
-folder_fig = dir_home + '/aristizabal/Figures/'
+#folder_fig = dir_home + '/aristizabal/Figures/'
+folder_fig = '/www/web/rucool/aristizabal/Figures/'
 
 # folder nc files POM
 folder_pom19 =  dir_home + '/aristizabal/HWRF2019_POM_Dorian/'
@@ -288,11 +289,10 @@ plt.plot(lon_forec_track_hycom_exp[oktt], lat_forec_track_hycom_exp[oktt],'H-',c
          markeredgecolor='k',label='HYCOM Exp',markersize=7)
 plt.plot(lon_best_track[okt], lat_best_track[okt],'o-',color='k',label='Best Track')
 #plt.legend()
-plt.title('Track Forecast Dorian cycle='+ cycle,fontsize=18)
+plt.title('Track Forecast Dorian cycle '+ cycle,fontsize=18)
 plt.axis('scaled')
 plt.xlim([np.min(lon_forec_track_pom_oper[oktt])-0.5,np.max(lon_forec_track_pom_oper[oktt])+0.5])
 plt.ylim([np.min(lat_forec_track_pom_oper[oktt])-0.5,np.max(lat_forec_track_pom_oper[oktt])+0.5])
-
 
 for i,t in enumerate(lead_time_pom_oper[oktt][::2][0:6]):
     ax.text(lon_forec_track_pom_oper[oktt][::2][i]-1,lat_forec_track_pom_oper[oktt][::2][i]-0.3,\
@@ -302,61 +302,14 @@ for i,t in enumerate(lead_time_pom_oper[oktt][::2][6:10]):
     ax.text(lon_forec_track_pom_oper[oktt][::2][6:10][i]+0.5,lat_forec_track_pom_oper[oktt][::2][6:10][i],\
             str(t),fontsize=10,bbox=dict(facecolor='white', alpha=0.3))
 
+plt.text(-63.9,19.2,'T1',fontsize=14)
+plt.arrow(-65.4,17.7,1.3,1.2,fc='k',head_width=0.3, head_length=0.3)
+plt.text(-69.8,26.5,'T2',fontsize=14)
+plt.arrow(-71.3,25.1,1.3,1.2,fc='k',head_width=0.3, head_length=0.3)
+plt.text(-72.2,28.3,'T3',fontsize=14)
+plt.arrow(-73.7,26.75,1.3,1.2,fc='k',head_width=0.3, head_length=0.3)
+
 file = folder_fig + 'best_track_vs_forec_track_' + cycle
-plt.savefig(file,bbox_inches = 'tight',pad_inches = 0.1)
-
-#%% Figure forecasted intensity models vs best intensity
-
-fig,ax1 = plt.subplots(figsize=(10, 4))
-plt.ion()
-plt.plot(lead_time_pom_oper[::2],wind_int_kt[okt],'o-k',label='Best')
-plt.plot(lead_time_pom_oper,max_wind_10m_hwrf_pom19_oper,'X-',color='mediumorchid',label='HWRF2010-POM (IC Clim.)',markeredgecolor='k',markersize=7)
-plt.plot(lead_time_pom_oper,max_wind_10m_hwrf_pom20_exp,'^-',color='teal',label='HWRF2020-POM (IC RTOFS)',markeredgecolor='k',markersize=7)
-plt.plot(lead_time_pom_oper,max_wind_10m_hwrf_hycom20_exp,'H-',color='darkorange',label='HWRF2020-HYCOM (IC RTOFS)',markeredgecolor='k',markersize=7)
-plt.legend(loc='upper left',fontsize=14)
-plt.ylim([20,165])
-plt.xlim([0,126])
-plt.xticks(np.arange(0,126,12))
-ax1.xaxis.set_major_locator(MultipleLocator(12))
-ax1.xaxis.set_major_formatter(FormatStrFormatter('%d'))
-ax1.xaxis.set_minor_locator(MultipleLocator(3))
-plt.title('Intensity Forecast Dorian '+ cycle,fontsize=18)
-plt.ylabel('Max 10m Wind (kt)',fontsize=14)
-
-ax2 = ax1.twinx()
-plt.ylim([20,165])
-yticks = [64,83,96,113,137]
-plt.yticks(yticks,['Cat 1','Cat 2','Cat 3','Cat 4','Cat 5'])
-plt.grid(True)
-
-file = folder_fig + 'best_intensity_vs_forec_intensity_' + cycle
-plt.savefig(file,bbox_inches = 'tight',pad_inches = 0.1)
-
-#%% Intensity error
-
-from matplotlib.ticker import (MultipleLocator, FormatStrFormatter)
-
-int_err_hwrf19_pom_oper = (wind_int_kt[okt] - max_wind_10m_hwrf_pom19_oper[::2]) #*100/wind_int_kt[okt]
-int_err_hwrf20_pom_exp = (wind_int_kt[okt] - max_wind_10m_hwrf_pom20_exp[::2]) #*100/wind_int_kt[okt]
-int_err_hwrf20_hycom_exp = (wind_int_kt[okt] - max_wind_10m_hwrf_hycom20_exp[::2]) #*100/wind_int_kt[okt]
-
-fig,ax1 = plt.subplots(figsize=(10, 4))
-plt.ion()
-plt.plot(lead_time_pom_oper[::2],int_err_hwrf19_pom_oper,'X-',color='mediumorchid',label='HWRF2019-POM Oper',markeredgecolor='k',markersize=7)
-plt.plot(lead_time_pom_exp[::2],int_err_hwrf20_pom_exp,'^-',color='teal',label='HRWF2020-POM Exp',markeredgecolor='k',markersize=7)
-plt.plot(lead_time_hycom_exp[::2],int_err_hwrf20_hycom_exp,'H-',color='darkorange',label='HWRF2020-HYCOM Exp',markeredgecolor='k',markersize=7)
-plt.plot(lead_time_pom_oper[::2],np.tile(0,len(lead_time_pom_oper[::2])),'--k')
-plt.xlim([0,126])
-plt.xticks(np.arange(0,126,12))
-ax1.xaxis.set_major_locator(MultipleLocator(12))
-ax1.xaxis.set_major_formatter(FormatStrFormatter('%d'))
-ax1.xaxis.set_minor_locator(MultipleLocator(3))
-plt.title('Intensity Forecast Error Dorian '+ cycle,fontsize=18)
-plt.ylabel('Forecast Error (Kt)',fontsize=14)
-plt.xlabel('Forecast Lead Time (Hr)',fontsize=14)
-#plt.legend()
-
-file = folder_fig + 'intensity_error_' + cycle
 plt.savefig(file,bbox_inches = 'tight',pad_inches = 0.1)
 
 #%% Figure forecasted intensity models vs best intensity
@@ -365,15 +318,17 @@ okt = np.logical_and(time_best_track >= tini,time_best_track <= tend)
 
 lead_time_pom_oper = np.arange(0,129,3)
 
-fig,ax1 = plt.subplots(figsize=(10, 5))
-plt.ion()
+fig,ax1 = plt.subplots(figsize=(10, 4))
 plt.plot(lead_time_pom_oper[::2],wind_int_kt[okt],'o-k',label='Best')
 plt.plot(lead_time_pom_oper,max_wind_10m_hwrf_pom19_oper,'X-',color='mediumorchid',label='HWRF2010-POM (IC Clim.)',markeredgecolor='k',markersize=7)
 plt.plot(lead_time_pom_oper,max_wind_10m_hwrf_pom20_exp,'^-',color='teal',label='HWRF2020-POM (IC RTOFS)',markeredgecolor='k',markersize=7)
 plt.plot(lead_time_pom_oper,max_wind_10m_hwrf_hycom20_exp,'H-',color='darkorange',label='HWRF2020-HYCOM (IC RTOFS)',markeredgecolor='k',markersize=7)
-plt.plot(np.tile(15,len(np.arange(0,110))),np.arange(0,110),'--',color='k')
-#plt.plot(np.tile(24,len(np.arange(0,100))),np.arange(0,100),'--',color='grey')
-plt.plot(np.tile(66,len(np.arange(0,110))),np.arange(0,110),'--k')
+plt.plot(np.tile(18,len(np.arange(0,110))),np.arange(0,110),'--',color='k')
+plt.plot(np.tile(66,len(np.arange(0,110))),np.arange(0,110),'--',color='k')
+plt.plot(np.tile(84,len(np.arange(0,110))),np.arange(0,110),'--k')
+plt.text(14,25,'T1',fontsize=14)
+plt.text(62,25,'T2',fontsize=14)
+plt.text(80,25,'T3',fontsize=14)
 
 ax1.tick_params(which='major', width=2)
 ax1.tick_params(which='major', length=7)
@@ -390,7 +345,7 @@ plt.legend(loc='upper left',fontsize=14)
 plt.ylim([20,165])
 plt.xlim([0,126])
 plt.xticks(np.arange(0,126,12))
-plt.title('Intensity Forecast Dorian '+ cycle,fontsize=18)
+plt.title('Intensity Forecast Dorian Cycle '+ cycle,fontsize=18)
 plt.ylabel('Max 10m Wind (kt)',fontsize=14)
 
 ax2 = ax1.twinx()
@@ -399,5 +354,161 @@ yticks = [64,83,96,113,137]
 plt.yticks(yticks,['Cat 1','Cat 2','Cat 3','Cat 4','Cat 5'])
 plt.grid(True)
 
-file = folder_fig + 'best_intensity_vs_forec_intensity2_' + cycle 
-plt.savefig(file,bbox_inches = 'tight',pad_inches = 0.1) 
+file = folder_fig + 'best_intensity_vs_forec_intensity_' + cycle
+plt.savefig(file,bbox_inches = 'tight',pad_inches = 0.1)
+
+#%% Intensity error
+
+int_err_hwrf19_pom_oper = (wind_int_kt[okt] - max_wind_10m_hwrf_pom19_oper[::2]) #*100/wind_int_kt[okt]
+int_err_hwrf20_pom_exp = (wind_int_kt[okt] - max_wind_10m_hwrf_pom20_exp[::2]) #*100/wind_int_kt[okt]
+int_err_hwrf20_hycom_exp = (wind_int_kt[okt] - max_wind_10m_hwrf_hycom20_exp[::2]) #*100/wind_int_kt[okt]
+
+fig,ax1 = plt.subplots(figsize=(10, 4))
+plt.plot(lead_time_pom_oper[::2],int_err_hwrf19_pom_oper,'X-',color='mediumorchid',label='HWRF2019-POM Oper',markeredgecolor='k',markersize=7)
+plt.plot(lead_time_pom_exp[::2],int_err_hwrf20_pom_exp,'^-',color='teal',label='HRWF2020-POM Exp',markeredgecolor='k',markersize=7)
+plt.plot(lead_time_hycom_exp[::2],int_err_hwrf20_hycom_exp,'H-',color='darkorange',label='HWRF2020-HYCOM Exp',markeredgecolor='k',markersize=7)
+plt.plot(lead_time_pom_oper[::2],np.tile(0,len(lead_time_pom_oper[::2])),'--k')
+
+plt.plot(np.tile(18,len(np.arange(-10,40))),np.arange(-10,40),'--',color='k')
+plt.plot(np.tile(66,len(np.arange(-10,40))),np.arange(-10,40),'--',color='k')
+plt.plot(np.tile(84,len(np.arange(-10,40))),np.arange(-10,40),'--k')
+plt.text(14,25,'T1',fontsize=14)
+plt.text(62,25,'T2',fontsize=14)
+plt.text(80,25,'T3',fontsize=14)
+
+ax1.tick_params(which='major', width=2)
+ax1.tick_params(which='major', length=7)
+ax1.tick_params(which='minor', length=4, color='k')
+
+ax1.xaxis.set_major_locator(MultipleLocator(12))
+ax1.xaxis.set_major_formatter(FormatStrFormatter('%d'))
+ax1.xaxis.set_minor_locator(MultipleLocator(3))
+ax1.xaxis.set_ticks(np.arange(0,126,12))
+ax1.xaxis.set_ticklabels(['28-Aug \n 0','\n 12','29-Aug \n 24','\n 36','30-Aug \n 48',\
+                          '\n 60','31-Aug \n 72','\n 84','01-Sep \n 96','\n 108','02-Sep \n 120'])
+plt.xlabel('Forecast Lead Time (Hr)',fontsize=14,labelpad=10)
+plt.legend(loc='upper left',fontsize=14)
+#plt.ylim([20,165])
+plt.xlim([0,126])
+plt.xticks(np.arange(0,126,12))
+
+plt.title('Intensity Forecast Error Dorian Cycle '+ cycle,fontsize=18)
+plt.ylabel('Forecast Error (Kt)',fontsize=14)
+plt.xlabel('Forecast Lead Time (Hr)',fontsize=14)
+#plt.legend()
+
+file = folder_fig + 'intensity_error_' + cycle
+plt.savefig(file,bbox_inches = 'tight',pad_inches = 0.1)
+
+#%% Three figures combined
+
+fig, ax = plt.subplots(figsize=(15, 7))
+grid = plt.GridSpec(2, 5, wspace=0.6, hspace=0.3,left=0.05,right=0.95)
+plt.suptitle('Hurricane Dorian Forecast cycle '+ cycle,fontsize=18)
+
+ax = plt.subplot(grid[0:2, 0:2])
+plt.contourf(bath_lonsub,bath_latsub,bath_elevsub,lev,cmap=cmocean.cm.topo)
+plt.plot(lon_forec_track_pom_oper[oktt], lat_forec_track_pom_oper[oktt],'X-',color='mediumorchid',\
+         markeredgecolor='k',label='POM Oper',markersize=7)
+plt.plot(lon_forec_track_pom_exp[oktt], lat_forec_track_pom_exp[oktt],'^-',color='teal',\
+         markeredgecolor='k',label='POM Exp',markersize=7)
+plt.plot(lon_forec_track_hycom_exp[oktt], lat_forec_track_hycom_exp[oktt],'H-',color='orange',\
+         markeredgecolor='k',label='HYCOM Exp',markersize=7)
+plt.plot(lon_best_track[okt], lat_best_track[okt],'o-',color='k',label='Best Track')
+plt.title('Track Forecast',fontsize=16)
+plt.axis('scaled')
+plt.xlim([np.min(lon_forec_track_pom_oper[oktt])-0.5,np.max(lon_forec_track_pom_oper[oktt])+0.5])
+plt.ylim([np.min(lat_forec_track_pom_oper[oktt])-0.5,np.max(lat_forec_track_pom_oper[oktt])+0.5])
+
+for i,t in enumerate(lead_time_pom_oper[oktt][::2][0:6]):
+    ax.text(lon_forec_track_pom_oper[oktt][::2][i]-1,lat_forec_track_pom_oper[oktt][::2][i]-0.3,\
+            str(t),fontsize=10,bbox=dict(facecolor='white', alpha=0.5))
+
+for i,t in enumerate(lead_time_pom_oper[oktt][::2][6:10]):
+    ax.text(lon_forec_track_pom_oper[oktt][::2][6:10][i]+0.5,lat_forec_track_pom_oper[oktt][::2][6:10][i],\
+            str(t),fontsize=10,bbox=dict(facecolor='white', alpha=0.3))
+
+plt.text(-63.9,19.2,'T1',fontsize=14)
+plt.arrow(-65.4,17.7,1.3,1.2,fc='k',head_width=0.3, head_length=0.3)
+plt.text(-69.8,26.5,'T2',fontsize=14)
+plt.arrow(-71.3,25.1,1.3,1.2,fc='k',head_width=0.3, head_length=0.3)
+plt.text(-72.2,28.3,'T3',fontsize=14)
+plt.arrow(-73.7,26.75,1.3,1.2,fc='k',head_width=0.3, head_length=0.3)
+plt.text(-81.5,31,'(a)',fontsize=16)
+
+ax1 = plt.subplot(grid[0, 2:])
+plt.plot(lead_time_pom_oper[::2],wind_int_kt[okt],'o-k',label='Best')
+plt.plot(lead_time_pom_oper,max_wind_10m_hwrf_pom19_oper,'X-',color='mediumorchid',label='HWRF2010-POM (IC Clim.)',markeredgecolor='k',markersize=7)
+plt.plot(lead_time_pom_oper,max_wind_10m_hwrf_pom20_exp,'^-',color='teal',label='HWRF2020-POM (IC RTOFS)',markeredgecolor='k',markersize=7)
+plt.plot(lead_time_pom_oper,max_wind_10m_hwrf_hycom20_exp,'H-',color='darkorange',label='HWRF2020-HYCOM (IC RTOFS)',markeredgecolor='k',markersize=7)
+plt.plot(np.tile(18,len(np.arange(0,110))),np.arange(0,110),'--',color='k')
+plt.plot(np.tile(66,len(np.arange(0,110))),np.arange(0,110),'--',color='k')
+plt.plot(np.tile(84,len(np.arange(0,110))),np.arange(0,110),'--k')
+plt.text(14,25,'T1',fontsize=14)
+plt.text(62,25,'T2',fontsize=14)
+plt.text(80,25,'T3',fontsize=14)
+
+ax1.tick_params(which='major', width=2)
+ax1.tick_params(which='major', length=7)
+ax1.tick_params(which='minor', length=4, color='k')
+
+ax1.xaxis.set_major_locator(MultipleLocator(12))
+ax1.xaxis.set_major_formatter(FormatStrFormatter('%d'))
+ax1.xaxis.set_minor_locator(MultipleLocator(3))
+ax1.xaxis.set_ticks(np.arange(0,126,12))
+#ax1.xaxis.set_ticklabels(['28-Aug \n 0','\n 12','29-Aug \n 24','\n 36','30-Aug \n 48',\
+#                          '\n 60','31-Aug \n 72','\n 84','01-Sep \n 96','\n 108','02-Sep \n 120'])
+ax1.xaxis.set_ticklabels([])
+#plt.xlabel('Forecast Lead Time (Hr)',fontsize=14,labelpad=10)
+legend = plt.legend(loc='upper left',fontsize=12)
+legend.get_frame().set_facecolor('white')
+plt.ylim([20,165])
+plt.xlim([0,126])
+plt.xticks(np.arange(0,126,12))
+plt.title('Intensity Forecast',fontsize=16)
+plt.ylabel('Max 10m Wind (kt)',fontsize=14)
+
+ax2 = ax1.twinx()
+plt.ylim([20,165])
+yticks = [64,83,96,113,137]
+plt.yticks(yticks,['Cat 1','Cat 2','Cat 3','Cat 4','Cat 5'])
+plt.grid(True)
+ax1.legend(loc='upper left',fontsize=12)
+plt.text(0,170,'(b)',fontsize=16)
+
+ax1 = plt.subplot(grid[1, 2:])
+plt.plot(lead_time_pom_oper[::2],int_err_hwrf19_pom_oper,'X-',color='mediumorchid',label='HWRF2019-POM Oper',markeredgecolor='k',markersize=7)
+plt.plot(lead_time_pom_exp[::2],int_err_hwrf20_pom_exp,'^-',color='teal',label='HRWF2020-POM Exp',markeredgecolor='k',markersize=7)
+plt.plot(lead_time_hycom_exp[::2],int_err_hwrf20_hycom_exp,'H-',color='darkorange',label='HWRF2020-HYCOM Exp',markeredgecolor='k',markersize=7)
+plt.plot(lead_time_pom_oper[::2],np.tile(0,len(lead_time_pom_oper[::2])),'--k')
+
+plt.plot(np.tile(18,len(np.arange(-10,50))),np.arange(-10,50),'--',color='k')
+plt.plot(np.tile(66,len(np.arange(-10,50))),np.arange(-10,50),'--',color='k')
+plt.plot(np.tile(84,len(np.arange(-10,50))),np.arange(-10,50),'--k')
+plt.text(14,40,'T1',fontsize=14)
+plt.text(62,40,'T2',fontsize=14)
+plt.text(80,40,'T3',fontsize=14)
+
+ax1.tick_params(which='major', width=2)
+ax1.tick_params(which='major', length=7)
+ax1.tick_params(which='minor', length=4, color='k')
+
+ax1.xaxis.set_major_locator(MultipleLocator(12))
+ax1.xaxis.set_major_formatter(FormatStrFormatter('%d'))
+ax1.xaxis.set_minor_locator(MultipleLocator(3))
+ax1.xaxis.set_ticks(np.arange(0,126,12))
+ax1.xaxis.set_ticklabels(['28-Aug \n 0','\n 12','29-Aug \n 24','\n 36','30-Aug \n 48',\
+                          '\n 60','31-Aug \n 72','\n 84','01-Sep \n 96','\n 108','02-Sep \n 120'])
+plt.xlabel('Forecast Lead Time (Hr)',fontsize=14,labelpad=10)
+#plt.legend(loc='upper left',fontsize=14)
+#plt.ylim([20,165])
+plt.xlim([0,126])
+plt.xticks(np.arange(0,126,12))
+
+plt.title('Intensity Forecast Error',fontsize=16)
+plt.ylabel('Forecast Error (Kt)',fontsize=14)
+plt.xlabel('Forecast Lead Time (Hr)',fontsize=14)
+plt.text(0,60,'(c)',fontsize=16)
+
+file = folder_fig + 'Int_forec_track_Dorian_' + cycle
+plt.savefig(file,bbox_inches = 'tight',pad_inches = 0.1)
