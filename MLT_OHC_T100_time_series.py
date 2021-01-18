@@ -904,6 +904,7 @@ plt.title('Ocean Heat Content',fontsize=16)
 plt.grid(True)
 ax2.text(datetime(2019,8,28,1),92,'(b)',fontsize=16)
 ax2.set_xticklabels([])
+ax2.plot(timeg,np.tile(60,len(timeg)),'--k')
 
 ax3 = plt.subplot(grid[2, 0])
 ax3.plot(timeg,T100_glid,'-o',color='royalblue',label=dataset_id.split('-')[0],linewidth=4)
@@ -927,7 +928,7 @@ ax3.set_title('T100',fontsize=16)
 plt.grid(True)
 ax3.text(datetime(2019,8,28,1),28.65,'(c)',fontsize=16)
 
-file = folder_fig + 'MLT_OHC_T100_time_series'
+file = folder_fig + 'MLT_OHC_T100_time_series2'
 plt.savefig(file,bbox_inches = 'tight',pad_inches = 0.1,dpi=1000)
 
 #%%

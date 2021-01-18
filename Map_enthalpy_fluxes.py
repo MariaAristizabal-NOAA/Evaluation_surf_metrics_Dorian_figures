@@ -265,7 +265,7 @@ date_end = tend.strftime('%Y/%m/%d/%H/%M/%S')
 
 fig, ax = plt.subplots(figsize=(15, 15))
 grid = plt.GridSpec(3, 9, wspace=0.1, hspace=0.3,left=0.05,right=0.95)
-fig.suptitle('Sea Surface Heat Loss per Unit Area',fontsize=20)
+fig.suptitle('Sea Surface Heat Loss per Unit Area Forecast Cycle '+cycle,fontsize=20)
 
 #%% Acumulated heat fluxes POM oper
 RR_norm_bins = np.arange(0,8.1,0.5)
@@ -679,7 +679,8 @@ for N in np.arange(3):
     plt.ylim(0,1.8)
     plt.ylabel('$Kj/cm^2$',fontsize=14)
     plt.xticks(np.arange(9))
-    plt.legend(loc='upper left',fontsize=10,bbox_to_anchor=(0.4,1))
+    if N==1:
+        plt.legend(loc='upper left',fontsize=10,bbox_to_anchor=(0.2,1))
     if N==2:
         plt.xlabel('r/Rmax',fontsize=14)
 
@@ -1350,7 +1351,7 @@ plt.plot(lead_time_hycom_exp[1:29],area_int_sshl_hycom_exp[1:29],'H-',color='dar
          label='HWRF2020-HYCOM (IC RTOFS) '+aif_hycom_exp+ ' KJ',markeredgecolor='k',markersize=7)
 ax.fill_between(lead_time_hycom_exp[1:29],area_int_sshl_hycom_exp[1:29],color='darkorange',alpha=0.1)
 
-plt.title('Area Integrated Sea Surface Heat Loss',fontsize=16)
+plt.title('Area Integrated Sea Surface Heat Loss \n Forecast Cycle '+cycle,fontsize=16)
 plt.ylabel('$KJ$',fontsize=14)
 plt.xlabel('Forecasted Lead Time (Hours)',fontsize=14)
 plt.legend(loc='lower right')

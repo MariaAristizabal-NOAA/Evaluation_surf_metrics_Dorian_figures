@@ -389,12 +389,13 @@ depth_HYCOM_exp = np.asarray(z)
 
 nz = len(depth_HYCOM_exp)
 
+#%%
 ###################### Start figure all panels MLT ##############################
 
 fig, ax = plt.subplots(figsize=(15, 15))
 grid = plt.GridSpec(3, 9, wspace=0.1, hspace=0.3,left=0.05,right=0.95)
 #rid = plt.GridSpec(3, 6, wspace=0.1, hspace=0.3,left=0.01,right=0.99)
-fig.suptitle('Mixed Layer Temperature',fontsize=20)
+fig.suptitle('Mixed Layer Temperature Forecast Cycle '+cycle,fontsize=20)
 
 RR_norm_bins = np.arange(0,8.1,0.5)
 RR_norm_bins_mid = RR_norm_bins[0:-1] + np.diff(RR_norm_bins)/2
@@ -904,7 +905,7 @@ plt.savefig(file_name,bbox_inches = 'tight',pad_inches = 0.1,dpi=350)
 
 fig, ax = plt.subplots(figsize=(15, 15))
 grid = plt.GridSpec(3, 9, wspace=0.1, hspace=0.3,left=0.05,right=0.95)
-fig.suptitle('Ocean Heat Content',fontsize=20)
+fig.suptitle('Ocean Heat Content Forecast Cycle '+ cycle,fontsize=20)
 
 RR_norm_bins = np.arange(0,8.1,0.5)
 RR_norm_bins_mid = RR_norm_bins[0:-1] + np.diff(RR_norm_bins)/2
@@ -1391,12 +1392,15 @@ for N in np.arange(3):
     ax = plt.subplot(grid[N, 7:])
     plt.plot(RR_norm_bins_mid,OHC_mean_pom_oper[N,1:],'X-',color='mediumorchid',label='HWRF2019-POM (IC clim.)',markeredgecolor='k',markersize=7)
     ax.fill_between(RR_norm_bins_mid,OHC_min_pom_oper[N,1:],OHC_max_pom_oper[N,1:],color='mediumorchid',alpha=0.1)
+    plt.plot(RR_norm_bins_mid,np.tile(60,len(RR_norm_bins_mid)),'--k')
 
     plt.plot(RR_norm_bins_mid,OHC_mean_pom_exp[N,1:],'^-',color='teal',label='HWRF2020-POM (RTOFS)',markeredgecolor='k',markersize=7)
     ax.fill_between(RR_norm_bins_mid,OHC_min_pom_exp[N,1:],OHC_max_pom_exp[N,1:],color='teal',alpha=0.1)
+    plt.plot(RR_norm_bins_mid,np.tile(60,len(RR_norm_bins_mid)),'--k')
 
     plt.plot(RR_norm_bins_mid,OHC_mean_hycom_exp[N,1:],'H-',color='darkorange',label='HWRF2020-HYCOM (RTOFS)',markeredgecolor='k',markersize=7)
     ax.fill_between(RR_norm_bins_mid,OHC_min_hycom_exp[N,1:],OHC_max_hycom_exp[N,1:],color='darkorange',alpha=0.1)
+    plt.plot(RR_norm_bins_mid,np.tile(60,len(RR_norm_bins_mid)),'--k')
 
     plt.title(str(time[N])[2:15],fontsize=14)
     plt.ylim(0,100)
