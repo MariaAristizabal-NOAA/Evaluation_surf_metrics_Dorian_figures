@@ -1112,7 +1112,7 @@ for n,file in enumerate(HWRF_HYCOM_exp[0:-1]):
 
 fig, ax = plt.subplots(figsize=(5, 15))
 grid = plt.GridSpec(4, 1, wspace=0.1, hspace=0.3,left=0.05,right=0.95)
-fig.suptitle('Intensity Forecast Cycle '+cycle,fontsize=16)
+fig.suptitle('Forecast Cycle '+cycle,fontsize=16)
 
 #%% Figure forecasted intensity models vs best intensity
 
@@ -1147,7 +1147,7 @@ ax1.xaxis.set_ticklabels([''])
 legend = ax1.legend(loc='upper left',fontsize=10,bbox_to_anchor=(0,1.5),framealpha=1)
 ax1.set_ylim([20,150])
 ax1.set_xlim([0,86])
-#plt.title('Intensity Forecast',fontsize=14,loc='right')
+plt.text(60,160,'Intensity',fontsize=14)
 ax1.set_ylabel('Max 10m Wind (kt)',fontsize=12)
 
 ax2 = ax1.twinx()
@@ -1260,7 +1260,7 @@ plt.title('Mean Ocean Heat Content within 4Rmax',fontsize=12)
 plt.ylim(25,100)
 plt.xlim(0,86)
 plt.ylabel('$Kj/cm^2$',fontsize=12)
-plt.xlabel('Forecasted Lead Time (Hours)',fontsize=12)
+plt.xlabel('Forecast Lead Time (Hours)',fontsize=12)
 #plt.legend(loc='lower left')
 plt.text(82,103,'(d)',fontsize=14)
 
@@ -1281,21 +1281,21 @@ perc_sshl_pom_exp = (acum_ai_sshl_hycom_exp - acum_ai_sshl_pom_exp)*100/acum_ai_
 fig, ax = plt.subplots(figsize=(7, 5))
 
 plt.plot(lead_time_pom_oper[1:29],area_int_sshl_pom_oper[1:29],'X-',color='mediumorchid',\
-         label=aif_pom_oper+ ' KJ',markeredgecolor='k',markersize=7)
+         label='HWRF2019-POM (IC clim.) ' + aif_pom_oper+ ' KJ',markeredgecolor='k',markersize=7)
 ax.fill_between(lead_time_pom_oper[1:29],area_int_sshl_pom_oper[1:29],color='mediumorchid',alpha=0.1)
 
 plt.plot(lead_time_pom_exp[1:29],area_int_sshl_pom_exp[1:29],'^-',color='teal',\
-         label=aif_pom_exp+ ' KJ',markeredgecolor='k',markersize=7)
+         label='HWRF2020-POM (IC RTOFS) ' + aif_pom_exp+ ' KJ',markeredgecolor='k',markersize=7)
 ax.fill_between(lead_time_pom_exp[1:29],area_int_sshl_pom_exp[1:29],color='teal',alpha=0.1)
 
 plt.plot(lead_time_hycom_exp[1:29],area_int_sshl_hycom_exp[1:29],'H-',color='darkorange',\
-         label=aif_hycom_exp+ ' KJ',markeredgecolor='k',markersize=7)
+         label='HWRF2020-HYCOM (IC RTOFS) ' + aif_hycom_exp+ ' KJ',markeredgecolor='k',markersize=7)
 ax.fill_between(lead_time_hycom_exp[1:29],area_int_sshl_hycom_exp[1:29],color='darkorange',alpha=0.1)
 
 plt.title('Area Integrated Sea Surface Heat Loss',fontsize=16)
 plt.ylabel('$KJ$',fontsize=12)
-plt.xlabel('Forecasted Lead Time (Hours)',fontsize=14)
-plt.legend(loc='lower right',fontsize=14)
+plt.xlabel('Forecast Lead Time (Hours)',fontsize=14)
+plt.legend(loc='lower right',fontsize=12)
 plt.xlim([0,86])
 plt.ylim([3*10**14,7*10**14])
 
@@ -1315,7 +1315,7 @@ file = folder_fig + 'Int_SSHL_final_fig' + '_' + cycle
 plt.savefig(file,bbox_inches = 'tight',pad_inches = 0.1)
 
 #%%%%%%%%%%%  Figure Accumulated Area Integrated Sea Surface Heat Loss vs forecasted lead time
-
+'''
 aif_pom_oper = str(format(acum_ai_sshl_pom_oper,'0.2E'))
 aif_pom_exp = str(format(acum_ai_sshl_pom_exp,'0.2E'))
 aif_hycom_exp = str(format(acum_ai_sshl_hycom_exp,'0.2E'))
@@ -1356,3 +1356,4 @@ ax.xaxis.set_ticklabels(['28-Aug \n 0','\n 12','29-Aug \n 24','\n 36','30-Aug \n
 
 file = folder_fig + 'Accum_Int_SSHL_final_fig' + '_' + cycle
 plt.savefig(file,bbox_inches = 'tight',pad_inches = 0.1)
+'''

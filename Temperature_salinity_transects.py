@@ -831,7 +831,7 @@ def figure_transect(var_name,var1,min_var1,max_var1,nlevels,var2,var3,\
     fig, ax = plt.subplots(figsize=(12, 2))
     cs = plt.contourf(time_matrix,depth,var1,cmap=color_map,**kw)
     plt.contour(time_matrix,depth,var1,[26],colors='k')
-    plt.plot(time,var2,'-',label='MLD dt',color='indianred',linewidth=2 )
+    plt.plot(time,var2,'-',label='MLD dT',color='indianred',linewidth=2 )
     plt.plot(time,var3,'-',label='MLD drho',color='darkgreen',marker='.',\
              markeredgecolor='k',linewidth=2 )
 
@@ -864,7 +864,7 @@ def figure_transect_subplot(ax,var_name,var1,min_var1,max_var1,nlevels,var2,var3
 
     cs = ax.contourf(time_matrix,depth,var1,cmap=color_map,**kw)
     ax.contour(time_matrix,depth,var1,[26],colors='k')
-    ax.plot(time,var2,'-',label='MLD dt',color='indianred',linewidth=2 )
+    ax.plot(time,var2,'-',label='MLD dT',color='indianred',linewidth=2 )
     ax.plot(time,var3,'-',label='MLD drho',color='darkgreen',marker='.',\
              markeredgecolor='k',linewidth=2 )
 
@@ -904,7 +904,7 @@ tend = tend
 ax1 = plt.subplot(grid[0, 0])
 figure_transect_subplot(ax1,var_name,var1,min_var1,max_var1,nlevels,var2,var3,\
                 time,tini,tend,depth,max_depth,color_map)
-ax1.legend()
+ax1.legend(bbox_to_anchor=(1.05,1.05))
 ax1.set_xticklabels([])
 ax1.set_ylabel('Depth (m)',fontsize=14)
 tDorian = np.tile(datetime(2019,8,29,0),len(np.arange(max_depth,0))) #ng665, ng666
@@ -928,7 +928,7 @@ tini = tini
 tend = tend
 figure_transect_subplot(ax2,var_name,var1,min_var1,max_var1,nlevels,var2,var3,\
                 time,tini,tend,depth,max_depth,color_map)
-ax2.legend()
+#ax2.legend()
 ax2.set_xticklabels([])
 tDorian = np.tile(datetime(2019,8,29,0),len(np.arange(max_depth,0))) #ng665, ng666
 ax2.plot(tDorian,np.arange(max_depth,0),'--k')
